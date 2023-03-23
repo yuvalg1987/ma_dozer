@@ -13,13 +13,14 @@ import simplejpeg
 from scipy.stats import uniform
 
 from ma_dozer.configs.config import Config
-from ma_dozer.configs.nodes_config import CameraNode
+from ma_dozer.configs.nodes_config import CameraNodeConfig
+from ma_dozer.utils.helpers.classes import Position, Rotation, Pose
 from ma_dozer.utils.zmq.infrastructure import Publisher
 
 
-def calc_dozer_pose(camera_config: CameraNode,
-                    aruco_detector,
-                    color_image_h: np.ndarray):
+def calc_poses(camera_config: CameraNodeConfig,
+               aruco_detector,
+               color_image_h: np.ndarray):
     ids, \
     corners, \
     rotation_vecs_i2c, \
@@ -30,18 +31,21 @@ def calc_dozer_pose(camera_config: CameraNode,
     curr_timestamp = time.time_ns()
 
     if ids is None or \
-            rotation_vecs_i2c is None or \
-            translation_vecs_c2i_c is None or \
-            translation_vecs_c2i_c is None:
-        return None
+       rotation_vecs_i2c is None or \
+       translation_vecs_c2i_c is None or \
+       translation_vecs_c2i_c is None:
+        return None, None
+
+    dozer_pose, dumper_pose = None, None
+
+    aruco_detector.draw_markers(color_image_h,
+                                corners, ids,
+                                camera_config.intrinsics_h,
+                                camera_config.dist_coeffs_h,
+                                rotation_vecs_i2c,
+                                translation_vecs_c2i_c)
 
     if camera_config.dozer_aruco_marker_id in ids:
-        aruco_detector.draw_markers(color_image_h,
-                                    corners, ids,
-                                    camera_config.intrinsics_h,
-                                    camera_config.dist_coeffs_h,
-                                    rotation_vecs_i2c,
-                                    translation_vecs_c2i_c)
 
         dozer_idx = np.where(ids == camera_config.dozer_aruco_marker_id)[0].item()
         dozer_marker_c = Position.from_array(translation_vecs_c2i_c[dozer_idx, :].T)
@@ -50,15 +54,29 @@ def calc_dozer_pose(camera_config: CameraNode,
 
         rot_dozer2c, _ = cv2.Rodrigues(rotation_vecs_i2c[dozer_idx, :])
         rot_dozer2w = Rotation.from_dcm((camera_config.rot_c2w_h @ rot_dozer2c).T)
-        dozer_pose = RealDozerPose.from_position(camera_config.dozer_aruco_marker_id,
-                                                 dozer_marker_w,
-                                                 rot_dozer2w,
-                                                 curr_timestamp)
+        dozer_pose = Pose.from_pos_rot(camera_config.dozer_aruco_marker_id,
+                                       dozer_marker_w,
+                                       rot_dozer2w,
+                                       curr_timestamp)
 
-        return dozer_pose
+    if camera_config.dumper_aruco_marker_id in ids:
+
+        dumper_idx = np.where(ids == camera_config.dumper_aruco_marker_id)[0].item()
+        dumper_marker_c = Position.from_array(translation_vecs_c2i_c[dumper_idx, :].T)
+        dumper_marker_w = Position.from_array(
+            camera_config.rot_c2w_h @ dumper_marker_c + camera_config.t_w2c_w_h.squeeze())
+
+        rot_dumper2c, _ = cv2.Rodrigues(rotation_vecs_i2c[dumper_idx, :])
+        rot_dumper2w = Rotation.from_dcm((camera_config.rot_c2w_h @ rot_dumper2c).T)
+        dumper_pose = Pose.from_pos_rot(camera_config.dozer_aruco_marker_id,
+                                        dumper_marker_w,
+                                        rot_dumper2w,
+                                        curr_timestamp)
+
+        return dozer_pose, dumper_pose
 
 
-def crop_bounds(camera_config: CameraConfig,
+def crop_bounds(camera_config: CameraNodeConfig,
                 height_map_h: np.ndarray,
                 topview_image_h: np.ndarray):
 
@@ -82,7 +100,7 @@ def crop_bounds(camera_config: CameraConfig,
     return height_map_final, topview_image_final
 
 
-def update_cupy_vars(camera_config: CameraConfig):
+def update_cupy_vars(camera_config: CameraNodeConfig):
     camera_config.intrinsics_d = cp.asarray(camera_config.intrinsics_h, dtype=cp.float32)
     camera_config.rot_c2w_d = cp.asarray(camera_config.rot_c2w_h, dtype=cp.float32)
     camera_config.t_w2c_w_d = cp.asarray(camera_config.t_w2c_w_h, dtype=cp.float32)
@@ -164,38 +182,57 @@ def aruco_position_func(config: Config, color_image_receiver):
     # Publishers #
     ##############
 
-    aruco_position_noise_rvs = uniform(loc=config.camera.aruco_position_added_noise_start,
-                                       scale=config.camera.aruco_position_added_noise_end -
-                                             config.camera.aruco_position_added_noise_start)
-    aruco_rotation_noise_rvs = uniform(loc=config.camera.aruco_rotation_added_noise_start,
-                                       scale=config.camera.aruco_rotation_added_noise_end -
-                                             config.camera.aruco_rotation_added_noise_start)
+    dozer_aruco_position_noise_rvs = uniform(loc=config.camera.dozer_aruco_position_added_noise_start,
+                                       scale=config.camera.dozer_aruco_position_added_noise_end -
+                                             config.camera.dozer_aruco_position_added_noise_start)
+    dozer_aruco_rotation_noise_rvs = uniform(loc=config.camera.dozer_aruco_rotation_added_noise_start,
+                                       scale=config.camera.dozer_aruco_rotation_added_noise_end -
+                                             config.camera.dozer_aruco_rotation_added_noise_start)
 
-    position_clean_publisher = Publisher(ip=config.camera.ip, port=config.camera.position_port)
-    position_estimated_publisher = Publisher(ip=config.camera.ip,
-                                             port=config.camera.estimated_position_port)
+    dumper_aruco_position_noise_rvs = uniform(loc=config.camera.dumper_aruco_position_added_noise_start,
+                                       scale=config.camera.dumper_aruco_position_added_noise_end -
+                                             config.camera.dumper_aruco_position_added_noise_start)
+    dumper_aruco_rotation_noise_rvs = uniform(loc=config.camera.dumper_aruco_rotation_added_noise_start,
+                                       scale=config.camera.dumper_aruco_rotation_added_noise_end -
+                                             config.camera.dumper_aruco_rotation_added_noise_start)
+
+    dozer_position_clean_publisher = Publisher(ip=config.camera.ip, port=config.camera.dozer_position_port)
+    dozer_position_estimated_publisher = Publisher(ip=config.camera.ip,  port=config.camera.dozer_estimated_position_port)
+
+    dumper_position_clean_publisher = Publisher(ip=config.camera.ip, port=config.camera.dumper_position_port)
+    dumper_position_estimated_publisher = Publisher(ip=config.camera.ip,  port=config.camera.dumper_estimated_position_port)
 
     while True:
 
         curr_color_image = color_image_receiver.recv()
 
-        dozer_pose = calc_dozer_pose(camera_config=config.camera,
-                                     aruco_detector=aruco_detector,
-                                     color_image_h=curr_color_image)
+        dozer_pose, dumper_pose = calc_poses(camera_config=config.camera,
+                                             aruco_detector=aruco_detector,
+                                             color_image_h=curr_color_image)
 
-        if dozer_pose is None:
-            print("Aruco Detection Missed")
-            continue
+        if dozer_pose is not None:
+            dozer_estimated_pose = dozer_pose.copy()
+            dozer_estimated_position = dozer_estimated_pose.position + dozer_aruco_position_noise_rvs.rvs(3)
+            dozer_estimated_rotation = dozer_estimated_pose.rotation + dozer_aruco_rotation_noise_rvs.rvs(3)
+            dozer_estimated_pose.update_position(dozer_estimated_position)
+            dozer_estimated_pose.update_rotation(dozer_estimated_rotation)
 
-        dozer_estimated_pose = dozer_pose.copy()
-        estimated_position = dozer_estimated_pose.position + aruco_position_noise_rvs.rvs(3)
-        estimated_rotation = dozer_estimated_pose.rotation + aruco_rotation_noise_rvs.rvs(3)
-        dozer_estimated_pose.update_position(estimated_position)
-        dozer_estimated_pose.update_rotation(estimated_rotation)
+            dozer_position_clean_publisher.send(config.topics.topic_dozer_position, dozer_pose.to_zmq_str())
+            dozer_position_estimated_publisher.send(config.topics.topic_dozer_estimated_position,
+                                                    dozer_estimated_pose.to_zmq_str())
 
-        position_clean_publisher.send(config.topics.topic_dozer_position, dozer_pose.to_zmq_str())
-        position_estimated_publisher.send(config.topics.topic_dozer_estimated_position,
-                                          dozer_estimated_pose.to_zmq_str())
+        if dumper_pose is not None:
+            dumper_estimated_pose = dumper_pose.copy()
+            dumper_estimated_position = dumper_estimated_pose.position + dumper_aruco_position_noise_rvs.rvs(3)
+            dumper_estimated_rotation = dumper_estimated_pose.rotation + dumper_aruco_rotation_noise_rvs.rvs(3)
+            dumper_estimated_pose.update_position(dumper_estimated_position)
+            dumper_estimated_pose.update_rotation(dumper_estimated_rotation)
+
+            dumper_position_clean_publisher.send(config.topics.topic_dumper_position, dumper_pose.to_zmq_str())
+            dumper_position_estimated_publisher.send(config.topics.topic_dumper_estimated_position,
+                                                     dumper_estimated_pose.to_zmq_str())
+
+
 
 
 def heightmap_proj_func(zmq_config, camera_config, color_image_receiver, depth_image_receiver):

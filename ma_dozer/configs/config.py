@@ -1,4 +1,4 @@
-from ma_dozer.configs.nodes_config import Topics, CameraNode, AlgoNode, DozerNode, DumperNode
+from ma_dozer.configs.nodes_config import Topics, CameraNodeConfig, AlgoNode, DozerNode, DumperNode
 from pydantic_config import BaseConfig
 
 
@@ -6,7 +6,7 @@ class Config(BaseConfig):
 
     topics: Topics = Topics()
 
-    camera: CameraNode = CameraNode()
+    camera: CameraNodeConfig = CameraNodeConfig()
     algo: AlgoNode = AlgoNode()
     dozer: DozerNode = DozerNode()
     dumper: DumperNode = DumperNode()
