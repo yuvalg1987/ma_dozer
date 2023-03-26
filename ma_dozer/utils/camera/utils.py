@@ -14,7 +14,10 @@ from scipy.stats import uniform
 
 from ma_dozer.configs.config import Config
 from ma_dozer.configs.nodes_config import CameraNodeConfig
+from ma_dozer.utils.camera import pcl_utils
+from ma_dozer.utils.camera.aruco_utils import ArucoDetector
 from ma_dozer.utils.helpers.classes import Position, Rotation, Pose
+from ma_dozer.utils.helpers.logger import init_exp_folder
 from ma_dozer.utils.zmq.infrastructure import Publisher
 
 
@@ -176,6 +179,7 @@ def zed_capture_func(camera_config, color_image_sender_0, color_image_sender_1, 
 
 
 def aruco_position_func(config: Config, color_image_receiver):
+
     aruco_detector = ArucoDetector(marker_length=config.camera.dozer_marker_length)
 
     ##############
@@ -183,18 +187,18 @@ def aruco_position_func(config: Config, color_image_receiver):
     ##############
 
     dozer_aruco_position_noise_rvs = uniform(loc=config.camera.dozer_aruco_position_added_noise_start,
-                                       scale=config.camera.dozer_aruco_position_added_noise_end -
+                                             scale=config.camera.dozer_aruco_position_added_noise_end -
                                              config.camera.dozer_aruco_position_added_noise_start)
     dozer_aruco_rotation_noise_rvs = uniform(loc=config.camera.dozer_aruco_rotation_added_noise_start,
-                                       scale=config.camera.dozer_aruco_rotation_added_noise_end -
+                                             scale=config.camera.dozer_aruco_rotation_added_noise_end -
                                              config.camera.dozer_aruco_rotation_added_noise_start)
 
     dumper_aruco_position_noise_rvs = uniform(loc=config.camera.dumper_aruco_position_added_noise_start,
-                                       scale=config.camera.dumper_aruco_position_added_noise_end -
-                                             config.camera.dumper_aruco_position_added_noise_start)
+                                              scale=config.camera.dumper_aruco_position_added_noise_end -
+                                              config.camera.dumper_aruco_position_added_noise_start)
     dumper_aruco_rotation_noise_rvs = uniform(loc=config.camera.dumper_aruco_rotation_added_noise_start,
-                                       scale=config.camera.dumper_aruco_rotation_added_noise_end -
-                                             config.camera.dumper_aruco_rotation_added_noise_start)
+                                              scale=config.camera.dumper_aruco_rotation_added_noise_end -
+                                              config.camera.dumper_aruco_rotation_added_noise_start)
 
     dozer_position_clean_publisher = Publisher(ip=config.camera.ip, port=config.camera.dozer_position_port)
     dozer_position_estimated_publisher = Publisher(ip=config.camera.ip,  port=config.camera.dozer_estimated_position_port)
@@ -231,8 +235,6 @@ def aruco_position_func(config: Config, color_image_receiver):
             dumper_position_clean_publisher.send(config.topics.topic_dumper_position, dumper_pose.to_zmq_str())
             dumper_position_estimated_publisher.send(config.topics.topic_dumper_estimated_position,
                                                      dumper_estimated_pose.to_zmq_str())
-
-
 
 
 def heightmap_proj_func(zmq_config, camera_config, color_image_receiver, depth_image_receiver):
