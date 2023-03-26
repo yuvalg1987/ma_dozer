@@ -1,6 +1,6 @@
 from abc import abstractmethod
 
-from dozer_prototype.scripts.roboclaw.roboclaw_3 import Roboclaw
+from ma_dozer.scripts.roboclaw.roboclaw_3 import Roboclaw
 
 
 class RoboclawBaseWrapper:

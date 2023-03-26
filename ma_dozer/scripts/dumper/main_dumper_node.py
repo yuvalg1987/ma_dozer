@@ -29,7 +29,7 @@ def main():
                                                        port=config.camera.position_port,
                                                        callback_func=control_manager.update_pose_aruco)
 
-    action_subscriber = ThreadedSubscriber(topics=[config.topics.topic_algo_action],
+    action_subscriber = ThreadedSubscriber(topics=[config.topics.topic_algo_dumper_action],
                                            ip=config.algo.ip,
                                            port=config.algo.action_port,
                                            callback_func=control_manager.update_action)

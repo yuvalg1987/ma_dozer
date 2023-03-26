@@ -1,4 +1,32 @@
-class Logger():
+import os
+import time
+from pathlib import Path
+
+from ma_dozer.utils.helpers.classes import IMUData, Pose
+
+dozer_prototype_path = Path(__file__).parent
+
+
+def init_exp_folder():
+
+    timestamp = time.strftime("%m%d_%H%M%S")
+    folder_name = f"exp_{timestamp.split('_')[0][2:]}_" + \
+                      f"{timestamp.split('_')[0][:2]}_" + \
+                      f"{timestamp.split('_')[1][:2]}_" + \
+                      f"{timestamp.split('_')[1][2:4]}"
+
+    folder_location = os.path.abspath(f'{dozer_prototype_path}/data/{folder_name}')
+    planner_log_location = os.path.abspath(f'{folder_location}/planner_logger.txt')
+    controller_log_location = os.path.abspath(f'{folder_location}/controller_logger.txt')
+    svo_file_location = os.path.abspath(f'{folder_location}/{folder_name}.svo')
+
+    if not (os.path.exists(folder_location)):
+        os.makedirs(folder_location)
+
+    return folder_location, planner_log_location, controller_log_location, svo_file_location
+
+
+class Logger:
 
     def __init__(self):
         super().__init__()
@@ -8,22 +36,11 @@ class Logger():
         self.controller_log_location, \
         self.svo_file_location = init_exp_folder()
 
-        self.planner_log_file = open(self.planner_log_location, "wb")
         self.controller_log_file = open(self.controller_log_location, "wb")
 
-    def log_course(self, curr_course, curr_pose, target_action):
-
-        self.planner_log_file.write(f'curr_pose = {curr_pose}'.encode() + '\n'.encode() )
-        self.planner_log_file.write(f'target_action = {target_action}'.encode() + '\n'.encode())
-
-        self.planner_log_file.write('current_course:'.encode() + '\n'.encode())
-
-        for curr_pose_tmp in curr_course:
-            self.planner_log_file.write(
-                f'curr_pose = {curr_pose_tmp[0]}'.encode() + f' curr_action = {curr_pose_tmp[1]}'.encode() + '\n'.encode())
-
-        self.planner_log_file.write('end of course:'.encode() + '\n\n'.encode())
-        return
+        self.imu_file = open('', 'w')
+        self.camera_gt_file = open('', 'w')
+        self.camera_file = open('', 'w')
 
     def log_controller_step(self, curr_pose, target_pose, curr_motor_command, curr_delta_eps):
 
@@ -39,4 +56,13 @@ class Logger():
         self.controller_log_file.write(f'target_pose = {target_pose}'.encode() + '\n'.encode())
         self.controller_log_file.write(f'curr_motor_command = {curr_motor_command}'.encode() + '\n'.encode())
         self.controller_log_file.write('\n'.encode())
+
+    def log_imu_readings(self, imu_sample: IMUData):
+        self.imu_file.write(imu_sample.to_log_str() + '\n')
+
+    def log_camera_gt(self, camera_meas: Pose):
+        self.camera_gt_file.write(camera_meas.to_log_str() + '\n')
+
+    def log_camera_est(self, camera_meas: Pose):
+        self.camera_gt_file.write(camera_meas.to_log_str() + '\n')
 

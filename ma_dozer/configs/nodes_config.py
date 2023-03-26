@@ -30,7 +30,8 @@ class Topics(BaseConfig):
     topic_color_image: str = "color_image"
     topic_depth_image: str = "depth_image"
 
-    topic_algo_action: str = "algo_action"
+    topic_algo_dozer_action: str = "algo_dozer_action"
+    topic_algo_dumper_action: str = "algo_dumper_action"
 
 
 class CameraNode(BaseConfig):
@@ -131,6 +132,9 @@ class DozerNode(BaseConfig):
     ip: str = '192.168.0.101'
     ack_port: int = 1235
     path_port: int = 1236
+    name: str = 'dozer'
+
+    action_file_path = './'
 
     imu_port = '/dev/ttyUSB0' # 'COM7 or COM8 for Windows
     imu_baud_rate = 115200
@@ -145,6 +149,9 @@ class DumperNode(BaseConfig):
     ip: str = '192.168.0.102'
     ack_port: int = 1235
     path_port: int = 1236
+    name: str = 'dumper'
+
+    action_file_path = './'
 
     imu_port = '/dev/ttyUSB0' # 'COM7 or COM8 for Windows
     imu_baud_rate = 115200

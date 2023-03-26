@@ -1,6 +1,7 @@
 import numpy as np
 from pydantic_config import BaseConfig
 
+
 def nav_config_factory(add_measurement_errors: bool = False,
                        add_nav_errors: bool = False,
                        add_IC_errors: bool = False,
@@ -89,7 +90,7 @@ class NavigationConfig(BaseConfig):
     IC_params_value: np.ndarray = np.zeros((3, 3))
     epsilon_dt_nav_to_dt_kal: float = None
     L_cut: int = None
-    plt_navigation_convergance_flag: bool = False
+    plt_navigation_convergence_flag: bool = False
 
     cam_meas_pos_error: np.ndarray = None
     cam_meas_att_error: np.ndarray = None

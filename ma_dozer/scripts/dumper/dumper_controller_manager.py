@@ -158,9 +158,9 @@ class DumperControlManager(Thread):
 
                 while not self.is_finished:
 
-                    if self.target_action is not None and motion_type is not None:
+                    if self.target_action is not None:  # and motion_type is not None
 
-                        self.controller.update_target_pose(self.target_action, motion_type)
+                        self.controller.update_target_pose(self.target_action)
                         self.controller.move_to_pose()
 
                         self.is_finished = epsilon_close_plan(self.config.dumper.controller,

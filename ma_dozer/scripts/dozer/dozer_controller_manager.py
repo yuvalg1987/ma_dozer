@@ -31,9 +31,6 @@ class DozerControlManager(Thread):
         self.dozer_publisher_ack: Publisher = Publisher(ip=self.config.dozer.ip,
                                                         port=self.config.dozer.ack_port)
 
-        # self.dozer_path_publisher: Publisher = Publisher(ip=self.config.dozer.ip,
-        #                                                  port=self.config.dozer.path_port)
-
         self.dozer_position_publisher: Publisher = Publisher(ip=self.config.dozer.ip,
                                                              port=self.config.dozer.kalman_position_port)
 
@@ -85,6 +82,7 @@ class DozerControlManager(Thread):
 
             curr_imu_measurement = IMUData.from_zmq_str(curr_data)
             strap_down_measurement = self.pose_estimator.update_imu_measurement(curr_imu_measurement)
+            self.logger.log_imu_readings(curr_imu_measurement)
 
             rotation_rad = strap_down_measurement.att
             rotation_deg = rotation_rad / np.pi * 180
@@ -111,6 +109,14 @@ class DozerControlManager(Thread):
     def update_pose_aruco(self, curr_topic: str, curr_data: str):
 
         curr_aruco_pose = Pose.from_zmq_str(curr_data)
+
+        if curr_topic == self.config.topics.topic_dozer_position:
+            self.logger.log_camera_gt(curr_aruco_pose)
+        elif curr_topic == self.config.topics.topic_estimated_dozer_position:
+            self.logger.log_camera_est(curr_aruco_pose)
+
+        if self.config.use_estimated_aruco_pose and curr_topic == self.config.topics.topic_dozer_position:
+            return
 
         if self.config.dozer.controller.use_ekf:
 
