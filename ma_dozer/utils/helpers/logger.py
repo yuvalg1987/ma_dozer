@@ -38,9 +38,14 @@ class Logger:
 
         self.controller_log_file = open(self.controller_log_location, "wb")
 
-        self.imu_file = open('', 'w')
-        self.camera_gt_file = open('', 'w')
-        self.camera_file = open('', 'w')
+        self.imu_file = open('./imu_meas.csv', 'w')
+        self.imu_file.write('time,x,y,z,yaw,pitch,roll\n')
+
+        self.camera_gt_file = open('./camera_gt_meas.csv', 'w')
+        self.camera_gt_file.write('time,x,y,z,yaw,pitch,roll\n')
+
+        self.camera_file = open('./camera_meas.csv', 'w')
+        self.camera_file.write('time,x,y,z,yaw,pitch,roll\n')
 
     def log_controller_step(self, curr_pose, target_pose, curr_motor_command, curr_delta_eps):
 
@@ -64,5 +69,5 @@ class Logger:
         self.camera_gt_file.write(camera_meas.to_log_str() + '\n')
 
     def log_camera_est(self, camera_meas: Pose):
-        self.camera_gt_file.write(camera_meas.to_log_str() + '\n')
+        self.camera_file.write(camera_meas.to_log_str() + '\n')
 

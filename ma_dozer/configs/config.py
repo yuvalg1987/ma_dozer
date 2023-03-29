@@ -13,4 +13,5 @@ class Config(BaseConfig):
     dumper: DumperNode = DumperNode()
 
     dozer_aruco_idx: int = 3
-    use_estimated_aruco_pose = True
+    dumper_aruco_idx: int = 4
+    use_estimated_aruco_pose = False

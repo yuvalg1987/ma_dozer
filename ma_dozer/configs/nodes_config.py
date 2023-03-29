@@ -134,9 +134,9 @@ class DozerNode(BaseConfig):
     path_port: int = 1236
     name: str = 'dozer'
 
-    action_file_path = './'
+    action_file_path = './1_actions.txt'
 
-    imu_port = '/dev/ttyUSB0' # 'COM7 or COM8 for Windows
+    imu_port = '/dev/ttyUSB0'  # 'COM7 or COM8 for Windows
     imu_baud_rate = 115200
     kalman_position_port: int = 1237
 

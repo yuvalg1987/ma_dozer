@@ -358,7 +358,7 @@ class Pose:
         return pos
 
     def to_log_str(self):
-        return ','.join((self.position.x, self.position.y, self.position.z,
+        return ','.join((self.timestamp, self.position.x, self.position.y, self.position.z,
                          self.rotation.yaw, self.rotation.pitch, self.rotation.roll))
 
 

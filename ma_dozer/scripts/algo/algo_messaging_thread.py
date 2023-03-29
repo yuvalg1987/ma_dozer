@@ -56,9 +56,6 @@ class AlgoMessagingThread(Thread):
 
     def init_connection(self):
 
-        curr_dozer_position = None
-        curr_dumper_position = None
-
         curr_dozer_action = None
 
         flag_init_dozer_pos = False
@@ -70,35 +67,37 @@ class AlgoMessagingThread(Thread):
                         socks[self.position_subscriber.get_socket()] == zmq.POLLIN):
                     curr_topic, curr_data = self.position_subscriber.receive()
                     if curr_topic == self.config.topics.topic_dozer_position and not flag_init_dozer_pos:
-                        curr_dozer_position = Pose.from_zmq_str(curr_data)
+                        self.dozer_curr_pose = Pose.from_zmq_str(curr_data)
                         flag_init_dozer_pos = True
                     elif curr_topic == self.config.topics.topic_dumper_position and not flag_init_dumper_pos:
-                        curr_dumper_position = Pose.from_zmq_str(curr_data)
+                        self.dumper_curr_pose = Pose.from_zmq_str(curr_data)
                         flag_init_dumper_pos = True
 
                     if flag_init_dozer_pos and flag_init_dumper_pos:
                         break
 
-        init_dozer_action = Action(x=curr_dozer_position.position.x,
-                                   y=curr_dozer_position.position.y,
-                                   z=curr_dozer_position.position.z,
-                                   yaw=curr_dozer_position.rotation.yaw,
-                                   pitch=curr_dozer_position.rotation.pitch,
-                                   roll=curr_dozer_position.rotation.roll,
+        init_dozer_action = Action(x=self.dozer_curr_pose.position.x,
+                                   y=self.dozer_curr_pose.position.y,
+                                   z=self.dozer_curr_pose.position.z,
+                                   yaw=self.dozer_curr_pose.rotation.yaw,
+                                   pitch=self.dozer_curr_pose.rotation.pitch,
+                                   roll=self.dozer_curr_pose.rotation.roll,
                                    forward_movement=True,
-                                   vehicle_id=curr_dozer_position.vehicle_id)
+                                   vehicle_id=self.dozer_curr_pose.vehicle_id)
 
-        init_dumper_action = Action(x=curr_dumper_position.position.x,
-                                    y=curr_dumper_position.position.y,
-                                    z=curr_dumper_position.position.z,
-                                    yaw=curr_dumper_position.rotation.yaw,
-                                    pitch=curr_dumper_position.rotation.pitch,
-                                    roll=curr_dumper_position.rotation.roll,
+        init_dumper_action = Action(x=self.dumper_curr_pose.position.x,
+                                    y=self.dumper_curr_pose.position.y,
+                                    z=self.dumper_curr_pose.position.z,
+                                    yaw=self.dumper_curr_pose.rotation.yaw,
+                                    pitch=self.dumper_curr_pose.rotation.pitch,
+                                    roll=self.dumper_curr_pose.rotation.roll,
                                     forward_movement=True,
-                                    vehicle_id=curr_dumper_position.vehicle_id)
+                                    vehicle_id=self.dumper_curr_pose.vehicle_id)
 
         flag_init_dozer_ack = False
         flag_init_dumper_ack = False
+
+        dumper_attempts = 10
         while True:
 
             socks = dict(self.subscriber_poller.poll(20))  # 20ms
@@ -125,31 +124,45 @@ class AlgoMessagingThread(Thread):
                         self.algo_action_publisher.send(self.config.topics.topic_algo_dozer_action,
                                                         init_dozer_action.to_zmq_str())
                         time.sleep(0.5)
-                    if not flag_init_dumper_ack:
+                    if not flag_init_dumper_ack and dumper_attempts > 0:
                         print(f'Send init dozer action = {init_dumper_action}')
                         self.algo_action_publisher.send(self.config.topics.topic_algo_dumper_action,
                                                         init_dumper_action.to_zmq_str())
                         time.sleep(0.5)
+                        dumper_attempts -= 1
+
+                        if dumper_attempts == 0:
+                            flag_init_dumper_ack = True
 
                 else:
                     print(f'Send init dozer action = {init_dozer_action}')
                     self.algo_action_publisher.send(self.config.topics.topic_algo_dozer_action,
                                                     init_dozer_action.to_zmq_str())
                     time.sleep(0.5)
-                    print(f'Send init dozer action = {init_dumper_action}')
-                    self.algo_action_publisher.send(self.config.topics.topic_algo_dumper_action,
-                                                    init_dumper_action.to_zmq_str())
-                    time.sleep(0.5)
+
+                    if dumper_attempts > 0:
+                        print(f'Send init dumper action = {init_dumper_action}')
+                        self.algo_action_publisher.send(self.config.topics.topic_algo_dumper_action,
+                                                        init_dumper_action.to_zmq_str())
+                        time.sleep(0.5)
+                        dumper_attempts -= 1
+                        if dumper_attempts == 0:
+                            flag_init_dumper_ack = True
 
             else:
                 print(f'Send init dozer action = {init_dozer_action}')
                 self.algo_action_publisher.send(self.config.topics.topic_algo_dozer_action,
                                                 init_dozer_action.to_zmq_str())
                 time.sleep(0.5)
-                print(f'Send init dozer action = {init_dumper_action}')
-                self.algo_action_publisher.send(self.config.topics.topic_algo_dumper_action,
-                                                init_dumper_action.to_zmq_str())
-                time.sleep(0.5)
+
+                if dumper_attempts > 0:
+                    print(f'Send init dumper action = {init_dumper_action}')
+                    self.algo_action_publisher.send(self.config.topics.topic_algo_dumper_action,
+                                                    init_dumper_action.to_zmq_str())
+                    time.sleep(0.5)
+                    dumper_attempts -= 1
+                    if dumper_attempts == 0:
+                        flag_init_dumper_ack = True
 
     def run(self):
         while True:

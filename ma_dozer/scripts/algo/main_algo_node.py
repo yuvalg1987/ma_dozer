@@ -18,13 +18,15 @@ def main():
                     name=config.dozer.name,
                     init_pose=init_dozer_pose)
 
-    dumper_env = Env(config=config,
-                     algo_messaging_thread=algo_messaging_thread,
-                     name=config.dumper.name,
-                     init_pose=init_dumper_pose)
-
     dozer_env.start()
-    dumper_env.start()
+
+    if init_dumper_pose is not None:
+        dumper_env = Env(config=config,
+                         algo_messaging_thread=algo_messaging_thread,
+                         name=config.dumper.name,
+                         init_pose=init_dumper_pose)
+
+        dumper_env.start()
 
 
 if __name__ == '__main__':

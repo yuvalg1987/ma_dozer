@@ -14,6 +14,7 @@ from scipy.stats import uniform
 
 from ma_dozer.configs.config import Config
 from ma_dozer.configs.nodes_config import CameraNode
+from ma_dozer.utils.helpers.classes import Pose, Rotation, Position
 from ma_dozer.utils.zmq.infrastructure import Publisher
 
 
@@ -50,18 +51,17 @@ def calc_dozer_pose(camera_config: CameraNode,
 
         rot_dozer2c, _ = cv2.Rodrigues(rotation_vecs_i2c[dozer_idx, :])
         rot_dozer2w = Rotation.from_dcm((camera_config.rot_c2w_h @ rot_dozer2c).T)
-        dozer_pose = RealDozerPose.from_position(camera_config.dozer_aruco_marker_id,
-                                                 dozer_marker_w,
-                                                 rot_dozer2w,
-                                                 curr_timestamp)
+        dozer_pose = Pose.from_position(camera_config.dozer_aruco_marker_id,
+                                        dozer_marker_w,
+                                        rot_dozer2w,
+                                        curr_timestamp)
 
         return dozer_pose
 
 
-def crop_bounds(camera_config: CameraConfig,
+def crop_bounds(camera_config: CameraNode,
                 height_map_h: np.ndarray,
                 topview_image_h: np.ndarray):
-
     lower_bound_crop_x = abs(int(camera_config.lower_bound_w_h[0] * camera_config.pixel_density))
     lower_bound_crop_y = abs(int(camera_config.lower_bound_w_h[1] * camera_config.pixel_density))
 
@@ -82,7 +82,7 @@ def crop_bounds(camera_config: CameraConfig,
     return height_map_final, topview_image_final
 
 
-def update_cupy_vars(camera_config: CameraConfig):
+def update_cupy_vars(camera_config: CameraNode):
     camera_config.intrinsics_d = cp.asarray(camera_config.intrinsics_h, dtype=cp.float32)
     camera_config.rot_c2w_d = cp.asarray(camera_config.rot_c2w_h, dtype=cp.float32)
     camera_config.t_w2c_w_d = cp.asarray(camera_config.t_w2c_w_h, dtype=cp.float32)

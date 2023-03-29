@@ -210,9 +210,9 @@ class IMUSubscriber(threading.Thread):
 
         return True
 
-
-    def calculate_imu_crc(self, data):
-        '''
+    @staticmethod
+    def calculate_imu_crc(data):
+        """
         Calculate the 16-bit CRC for the given message.
 
         Args:
@@ -220,7 +220,7 @@ class IMUSubscriber(threading.Thread):
 
         Return:
         unsigned short - CRC checksum value
-        '''
+        """
         data = bytearray(data)
 
         crc = np.array([0], dtype=np.ushort)
@@ -248,9 +248,9 @@ class IMUSubscriber(threading.Thread):
     #     return data
 
     def end_thread(self):
-        '''
+        """
         Call to end the IMU thread.
-        '''
+        """
 
         self._on = False
         print('IMU: thread close signal received')

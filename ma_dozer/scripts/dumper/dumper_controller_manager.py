@@ -48,6 +48,8 @@ class DumperControlManager(Thread):
         self.imu_message_div = 5
 
     def update_action(self, curr_topic: str, curr_data: str):
+        if curr_topic != self.config.topics.topic_algo_dumper_action:
+            return
 
         target_action = Action.from_zmq_str(curr_data)
 
