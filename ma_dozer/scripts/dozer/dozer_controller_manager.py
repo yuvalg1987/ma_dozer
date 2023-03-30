@@ -36,9 +36,9 @@ class DozerControlManager(Thread):
 
         self.logger: Logger = Logger()
         self.enable_meas_log: bool = False
-        # TODO: un-comment
-        # self.controller: PIDController = PIDController(controller_config=self.config.dozer.controller,
-        #                                                logger=self.logger)
+
+        self.controller: PIDController = PIDController(controller_config=self.config.dozer.controller,
+                                                       logger=self.logger)
 
         self.pose_init_stage = True
         self.pose_estimator = PoseEstimator(navigation_config=config.dozer.navigation)
@@ -118,8 +118,7 @@ class DozerControlManager(Thread):
                                                timestamp=strap_down_measurement.time)
 
             self.curr_pose = curr_dozer_pose.copy()
-            # TODO
-            # self.controller.update_pose(curr_dozer_pose)
+            self.controller.update_pose(curr_dozer_pose)
 
             self.imu_message_counter += 1
 
@@ -147,8 +146,7 @@ class DozerControlManager(Thread):
 
                 self.curr_pose = curr_aruco_pose.copy()
                 self.pose_estimator.init(curr_aruco_pose)
-                # TODO
-                # self.controller.update_pose(curr_aruco_pose)
+                self.controller.update_pose(curr_aruco_pose)
                 self.pose_init_stage = False
 
             else:
@@ -170,12 +168,11 @@ class DozerControlManager(Thread):
                                                    curr_data)
 
                 # print(f'Aruco Measurement {curr_aruco_pose}')
-                # self.controller.update_pose(curr_aruco_pose) was in comment before
+                # self.controller.update_pose(curr_aruco_pose)
 
         else:
             self.curr_pose = curr_aruco_pose.copy()
-            # TODO
-            # self.controller.update_pose(curr_aruco_pose)
+            self.controller.update_pose(curr_aruco_pose)
             self.pose_init_stage = False
             print(f'Aruco Measurement {curr_aruco_pose}')
 
@@ -191,9 +188,9 @@ class DozerControlManager(Thread):
                 while not self.is_finished:
 
                     if self.target_action is not None:  # and motion_type is not None
-                        # TODO
-                        # self.controller.update_target_pose(self.target_action)  # motion_type
-                        # self.controller.move_to_pose()
+
+                        self.controller.update_target_pose(self.target_action)  # motion_type
+                        self.controller.move_to_pose()
 
                         self.is_finished = epsilon_close_plan(self.config.dozer.controller,
                                                               self.curr_pose,
@@ -201,8 +198,7 @@ class DozerControlManager(Thread):
                                                               CompareType.ALL)
 
                         if self.is_finished:
-                            # TODO
-                            # self.controller.stop()
+                            self.controller.stop()
                             break
 
                 if self.is_finished:
@@ -215,5 +211,4 @@ class DozerControlManager(Thread):
         print('Exit control manger')
         self.is_stop = True
         time.sleep(1)
-        # TODO
-        # self.controller.stop()
+        self.controller.stop()

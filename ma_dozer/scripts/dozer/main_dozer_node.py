@@ -10,7 +10,6 @@ from ma_dozer.utils.zmq.infrastructure import ThreadedSubscriber
 
 
 def main():
-
     config: Config = Config()
 
     # navigation_file_location = dozer_prototype_path / 'configs' / 'real_navigation_config.yaml'
@@ -32,15 +31,14 @@ def main():
                                            port=config.algo.action_port,
                                            topics=[config.topics.topic_algo_dozer_action],
                                            callback_func=control_manager.update_action)
-    # TODO
-    # imu_measurement_subscriber = IMUSubscriber(imu_config=config.dozer,
-    #                                            callback_func=control_manager.update_pose_imu)
+
+    imu_measurement_subscriber = IMUSubscriber(imu_config=config.dozer,
+                                               callback_func=control_manager.update_pose_imu)
 
     aruco_est_position_subscriber.start()
     aruco_gt_position_subscriber.start()
     action_subscriber.start()
-    # TODO
-    # imu_measurement_subscriber.start()
+    imu_measurement_subscriber.start()
 
     control_manager.start()
 

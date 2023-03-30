@@ -36,9 +36,9 @@ class DumperControlManager(Thread):
 
         self.logger: Logger = Logger()
         self.enable_meas_log: bool = False
-        # TODO: un-comment
-        # self.controller: PIDController = PIDController(controller_config=self.config.dozer.controller,
-        #                                                logger=self.logger)
+
+        self.controller: PIDController = PIDController(controller_config=self.config.dozer.controller,
+                                                       logger=self.logger)
 
         self.pose_init_stage = True
         self.pose_estimator = PoseEstimator(navigation_config=config.dumper.navigation)

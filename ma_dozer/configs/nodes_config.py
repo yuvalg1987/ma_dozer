@@ -52,7 +52,6 @@ class CameraNode(BaseConfig):
     channel_num: int = 3
     record_video: bool = False
 
-    """
     camera_calibration_dir = Path(__file__).parent / '..' / '..' / 'camera_calibration'
     intrinsics_h: np.ndarray = np.load((camera_calibration_dir / 'intrinsics_params.npy').as_posix())
     rot_c2w_h: np.ndarray    = np.load((camera_calibration_dir / 'rot_c2w.npy').as_posix())
@@ -73,7 +72,6 @@ class CameraNode(BaseConfig):
 
     xaxis_marker_w: np.ndarray = np.load((camera_calibration_dir / 'xaxis_marker_w.npy').as_posix())
     yaxis_marker_w: np.ndarray = np.load((camera_calibration_dir / 'yaxis_marker_w.npy').as_posix())
-    """
 
     aruco_position_added_noise_start: float = -2
     aruco_position_added_noise_end: float = 2
