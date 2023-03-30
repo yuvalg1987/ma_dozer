@@ -19,7 +19,7 @@ def add_str_action(action_file, id_agent, pose_x, pose_y, yaw_ang, motor_command
 
 
 def main():
-    traj_action_file = open('../../scripts/dozer/1_actions.txt', 'w')
+    traj_action_file = open('../../scripts/algo/1_actions.txt', 'w')
     agent_id = 3
 
     MotorCommand = Enum('MotorCommand', 'FORWARD BACKWARD ROTATE_LEFT ROTATE_RIGHT')

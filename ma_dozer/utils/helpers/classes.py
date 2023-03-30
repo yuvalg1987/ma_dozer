@@ -506,7 +506,7 @@ class Action:
         return cls(x=float(x_str), y=float(y_str), z=float(z_str),
                    yaw=float(yaw_str), pitch=float(pitch_str), roll=float(roll_str),
                    forward_movement=forward_movement, vehicle_id=int(id_str),
-                   is_init_action=str2bool(is_init_action_str))
+                   is_init_action=str2bool(is_init_action_str.strip()))
 
     @classmethod
     def from_pose(cls, pose: Pose):

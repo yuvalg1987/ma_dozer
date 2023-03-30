@@ -74,6 +74,7 @@ class AlgoMessagingThread(Thread):
                         flag_init_dumper_pos = True
 
                     if flag_init_dozer_pos and flag_init_dumper_pos:
+                        print('got positions from camera')
                         break
 
         init_dozer_action = Action(x=self.dozer_curr_pose.position.x,

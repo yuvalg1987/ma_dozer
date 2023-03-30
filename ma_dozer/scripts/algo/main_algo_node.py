@@ -6,7 +6,7 @@ from ma_dozer.scripts.algo.algo_messaging_thread import AlgoMessagingThread
 def main():
 
     config = Config()
-
+    print('algo starts...')
     algo_messaging_thread = AlgoMessagingThread(config=config)
     algo_messaging_thread.start()
 
@@ -18,6 +18,7 @@ def main():
                     name=config.dozer.name,
                     init_pose=init_dozer_pose)
 
+    print('init finished')
     dozer_env.start()
 
     if init_dumper_pose is not None:

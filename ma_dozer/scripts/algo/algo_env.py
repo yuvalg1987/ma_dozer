@@ -66,5 +66,6 @@ class Env(Thread):
         if next_action == '':
             return True
         else:
+            self.action = self.action + self.init_pose
             self.action = Action.from_zmq_str(next_action)
         return False
