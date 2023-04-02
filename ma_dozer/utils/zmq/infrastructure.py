@@ -1,11 +1,8 @@
-from abc import abstractmethod
 from typing import Callable, Union, Optional
 from threading import Thread
 
 import zmq
 from typing import List
-
-from dozer_envs.scripts.configs.base_config import BaseClass
 
 
 class Publisher:

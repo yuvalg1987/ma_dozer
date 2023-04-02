@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 from ma_dozer.configs.controller_config import ControllerConfig
 from ma_dozer.configs.navigation_config import NavigationConfig
-from pydantic_config import BaseConfig
+from ma_dozer.configs.pydantic_config import BaseConfig
 
 
 class Topics(BaseConfig):
@@ -30,7 +30,8 @@ class Topics(BaseConfig):
     topic_color_image: str = "color_image"
     topic_depth_image: str = "depth_image"
 
-    topic_algo_action: str = "algo_action"
+    topic_algo_dozer_action: str = "algo_dozer_action"
+    topic_algo_dumper_action: str = "algo_dumper_action"
 
 
 class CameraNodeConfig(BaseConfig):
@@ -108,12 +109,12 @@ class CameraNodeConfig(BaseConfig):
     grid_height_c: int = None
     grid_width_c: int = None
 
-    intrinsics_d = None
-    rot_c2w_d = None
-    t_w2c_w_d = None
+    intrinsics_d: float = None
+    rot_c2w_d: float = None
+    t_w2c_w_d: float = None
 
-    lower_bound_d = None
-    upper_bound_d = None
+    lower_bound_d: int = None
+    upper_bound_d: int = None
 
     def __post_init__(self):
 
@@ -142,8 +143,11 @@ class DozerNode(BaseConfig):
     ip: str = '192.168.0.101'
     ack_port: int = 1235
     path_port: int = 1236
+    name: str = 'dozer'
 
-    imu_port = '/dev/ttyUSB0' # 'COM7 or COM8 for Windows
+    action_file_path = './1_actions.txt'
+
+    imu_port = '/dev/ttyUSB0'  # 'COM7 or COM8 for Windows
     imu_baud_rate = 115200
     kalman_position_port: int = 1237
 
@@ -156,6 +160,9 @@ class DumperNode(BaseConfig):
     ip: str = '192.168.0.102'
     ack_port: int = 1235
     path_port: int = 1236
+    name: str = 'dumper'
+
+    action_file_path = './1_actions.txt'
 
     imu_port = '/dev/ttyUSB0' # 'COM7 or COM8 for Windows
     imu_baud_rate = 115200

@@ -1,12 +1,18 @@
+import pathlib
 from copy import deepcopy
+from dataclasses import dataclass
 from enum import Enum
-from typing import Union
+from typing import Union, Optional
 
 import numpy as np
 import navpy as nav
+import yaml
+# from scipy.stats import rv_frozen, rv_continuous
 
 MotorCommand = Enum('MotorCommand', 'FORWARD BACKWARD ROTATE_LEFT ROTATE_RIGHT')
 CompareType = Enum('CompareType', 'TRANSLATION ROTATION ALL')
+basic_types = [float, int, str, np.ndarray, list, pathlib.WindowsPath, pathlib.PosixPath,
+               bool, type(None)]  # , rv_frozen, rv_continuous
 
 
 def str2bool(v):
@@ -137,11 +143,11 @@ class DeltaVelocity(np.ndarray):
 
 
 class DeltaTheta(np.ndarray):
-
     """
     All properties in this class are given in Radians
 
     """
+
     def __new__(cls, delta_yaw, delta_pitch, delta_roll):
         return np.asarray([delta_yaw, delta_pitch, delta_roll]).view(cls)
 
@@ -292,11 +298,11 @@ class Pose:
 
     def __eq__(self, other):
         if self._position.x == other._position.x and \
-           self._position.y == other._position.y and \
-           self._position.z == other._position.z and \
-           self._rotation.yaw == other._rotation.yaw and \
-           self._rotation.pitch == other._rotation.pitch and \
-           self._rotation.roll == other._rotation.roll:
+                self._position.y == other._position.y and \
+                self._position.z == other._position.z and \
+                self._rotation.yaw == other._rotation.yaw and \
+                self._rotation.pitch == other._rotation.pitch and \
+                self._rotation.roll == other._rotation.roll:
 
             return True
         else:
@@ -330,11 +336,12 @@ class Pose:
 
         dozer_pose = cls.from_classes(position=position,
                                       rotation=rotation,
-                                      velocity=Velocity(0,0,0),
+                                      velocity=Velocity(0, 0, 0),
                                       timestamp=timestamp, vehicle_id=marker_id)
 
         return dozer_pose
 
+    """
     @classmethod
     def from_action(cls, action: Action):
         pos = cls(action.position.x,
@@ -350,6 +357,11 @@ class Pose:
                   vehicle_id=action.vehicle_id)
 
         return pos
+        """
+
+    def to_log_str(self):
+        return ','.join([str(x) for x in [self.timestamp, self.position.x, self.position.y, self.position.z,
+                         self.rotation.yaw, self.rotation.pitch, self.rotation.roll]])
 
 
 class Action:
@@ -482,7 +494,8 @@ class Action:
     @classmethod
     def from_zmq_str(cls, pos_str: str):
 
-        id_str, x_str, y_str, z_str, yaw_str, pitch_str, roll_str, action_type_str, is_init_action_str = pos_str.split('#')
+        id_str, x_str, y_str, z_str, yaw_str, pitch_str, roll_str, action_type_str, is_init_action_str = pos_str.split(
+            '#')
         curr_action_type = action_type_str.split('.')[1]
 
         if curr_action_type == 'FORWARD':
@@ -492,7 +505,48 @@ class Action:
 
         return cls(x=float(x_str), y=float(y_str), z=float(z_str),
                    yaw=float(yaw_str), pitch=float(pitch_str), roll=float(roll_str),
-                   forward_movement=forward_movement, vehicle_id=int(id_str), is_init_action=str2bool(is_init_action_str))
+                   forward_movement=forward_movement, vehicle_id=int(id_str),
+                   is_init_action=str2bool(is_init_action_str.strip()))
+
+    @classmethod
+    def from_pose(cls, pose: Pose):
+        action = cls(pose.position.x,
+                     pose.position.y,
+                     pose.position.z,
+                     pose.rotation.euler.yaw,
+                     pose.rotation.euler.pitch,
+                     pose.rotation.euler.roll,
+                     forward_movement=False,
+                     is_init_action=False,
+                     vehicle_id=pose.vehicle_id)
+
+        return action
+
+    def to_pose(self, timestamp: Optional[int] = None):
+        pose = Pose(self.position.x,
+                    self.position.y,
+                    self.position.z,
+                    self.rotation.yaw,
+                    self.rotation.pitch,
+                    self.rotation.roll)
+        if timestamp is not None:
+            pose.update_timestamp(timestamp)
+        return pose
+
+    def __add__(self, other):
+        pos_x = self.position.x + other.position.x
+        pos_y = self.position.y + other.position.y
+        pos_z = self.position.z + other.position.z
+        rot_yaw = self.rotation.yaw + other.rotation.yaw
+        rot_pitch = self.rotation.pitch + other.rotation.pitch
+        rot_roll = self.rotation.roll + other.rotation.roll
+
+        return Action(pos_x, pos_y, pos_z,
+                      rot_yaw, rot_pitch, rot_roll,
+                      forward_movement=self.forward_movement,
+                      vehicle_id=self.vehicle_id,
+                      is_init_action=self.is_init_action,
+                      motion_type=self.motion_type)
 
 
 class IMUData:
@@ -501,9 +555,8 @@ class IMUData:
                  delta_t: float,
                  delta_velocity: DeltaVelocity,
                  delta_theta: DeltaTheta):
-
         self.timestamp: int = timestamp
-        self.delta_t : float = delta_t
+        self.delta_t: float = delta_t
         self.delta_velocity: DeltaVelocity = delta_velocity
         self.delta_theta: DeltaTheta = delta_theta
 
@@ -514,10 +567,9 @@ class IMUData:
 
     @classmethod
     def from_array(cls, timestamp: int,
-                        delta_t: float,
-                        delta_velocity: DeltaVelocity,
-                        delta_theta: DeltaTheta):
-
+                   delta_t: float,
+                   delta_velocity: DeltaVelocity,
+                   delta_theta: DeltaTheta):
         return cls(timestamp=timestamp,
                    delta_velocity=DeltaVelocity(dv_x=delta_velocity.dv_x,
                                                 dv_y=delta_velocity.dv_y,
@@ -529,12 +581,11 @@ class IMUData:
 
     @classmethod
     def from_zmq_str(cls, measurement_str: str):
-
         timestamp_str, \
         delta_t_str, \
         delta_velocity_x_str, \
         delta_velocity_y_str, \
-        delta_velocity_z_str,  \
+        delta_velocity_z_str, \
         delta_theta_yaw_str, \
         delta_theta_pitch_str, \
         delta_theta_roll_str = measurement_str.split('#')
@@ -549,7 +600,53 @@ class IMUData:
                                           delta_roll=float(delta_theta_roll_str)))
 
     def to_zmq_str(self):
-
         return f'{self.timestamp}#{self.delta_t}#' \
                f'{self.delta_velocity.dv_x}#{self.delta_velocity.dv_y}#{self.delta_velocity.dv_z}#' \
                f'{self.delta_theta.delta_yaw}#{self.delta_theta.delta_pitch}#{self.delta_theta.delta_roll}'
+
+    def to_log_str(self):
+        return ','.join((self.timestamp,
+                        self.delta_t,
+                        self.delta_velocity.dv_x,
+                        self.delta_velocity.dv_y,
+                        self.delta_velocity.dv_z,
+                        self.delta_theta.delta_yaw,
+                        self.delta_theta.delta_pitch,
+                        self.delta_theta.delta_roll))
+
+
+@dataclass
+class BaseClass(yaml.YAMLObject):
+    yaml_loader = yaml.SafeLoader
+
+    @classmethod
+    def from_yaml(cls, loader, node):
+        values = loader.construct_mapping(node, deep=True)
+        return cls(**values)
+
+    @classmethod
+    def from_str(cls, yaml_str):
+        data = yaml.safe_load(yaml_str)
+        return cls(**data)
+
+    @classmethod
+    def to_yaml(cls, dumper, data):
+        return dumper.represent_yaml_object(cls.yaml_tag, data, cls, flow_style=cls.yaml_flow_style)
+
+    def update(self, other):
+        class_keys = self.__dict__.keys()
+
+        for key in class_keys:
+            if type(self.__dict__[key]) in basic_types:
+                self.__dict__[key] = getattr(other, key)
+            else:
+                self.__dict__[key].update(getattr(other, key))
+
+
+class NavState(BaseClass):
+
+    def __init__(self, time, pos, vel, att):
+        self.time: float = time
+        self.pos: np.ndarray = pos
+        self.vel: np.ndarray = vel
+        self.att: np.ndarray = att
