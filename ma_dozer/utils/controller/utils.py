@@ -3,13 +3,14 @@ import math
 from typing import Union
 import numpy as np
 
+from ma_dozer.configs.controller_config import ControllerConfig
+from ma_dozer.utils.helpers.classes import Pose, Action, MotorCommand, CompareType
 
 print_control_counter: int = 0
 
 
-def calc_pose_distance(curr_pose: Union[RealDozerPose, RealDozerAction],
-                       target_pose: Union[RealDozerPose, RealDozerAction]):
-
+def calc_pose_distance(curr_pose: Union[Pose, Action],
+                       target_pose: Union[Pose, Action]):
     delta_xyz = np.linalg.norm(np.array([curr_pose.position.x - target_pose.position.x,
                                          curr_pose.position.y - target_pose.position.y]))
 
@@ -22,10 +23,9 @@ def calc_pose_distance(curr_pose: Union[RealDozerPose, RealDozerAction],
 
 
 def epsilon_close_control(controller_config: ControllerConfig(),
-                          curr_pose: Union[RealDozerPose, RealDozerAction],
-                          target_pose: Union[RealDozerPose, RealDozerAction],
+                          curr_pose: Union[Pose, Action],
+                          target_pose: Union[Pose, Action],
                           motor_command: MotorCommand):
-
     global print_control_counter
 
     delta_xyz, delta_yaw = calc_pose_distance(curr_pose, target_pose)
@@ -50,10 +50,9 @@ def epsilon_close_control(controller_config: ControllerConfig(),
 
 
 def epsilon_close_plan(controller_config: ControllerConfig(),
-                       curr_pose: Union[RealDozerPose, RealDozerAction],
-                       target_pose: Union[RealDozerPose, RealDozerAction],
+                       curr_pose: Union[Pose, Action],
+                       target_pose: Union[Pose, Action],
                        motion_type: CompareType):
-
     delta_xyz, delta_yaw = calc_pose_distance(curr_pose, target_pose)
 
     if motion_type == CompareType.TRANSLATION:
@@ -78,8 +77,8 @@ def check_turn_direction(rotation_angle: float):
         return MotorCommand.ROTATE_RIGHT
 
 
-def calc_path_angle(start_pose: Union[RealDozerPose, RealDozerAction],
-                    end_pose: RealDozerAction):
+def calc_path_angle(start_pose: Union[Pose, Action],
+                    end_pose: Action):
     """
     :param motion_direction:
     :param start_pose:
@@ -100,9 +99,8 @@ def calc_path_angle(start_pose: Union[RealDozerPose, RealDozerAction],
 
 
 def estimate_rotation_sequence(controller_config: ControllerConfig(),
-                               start_pose: RealDozerPose,
-                               end_pose: RealDozerAction):
-
+                               start_pose: Pose,
+                               end_pose: Action):
     curr_sequence = []
 
     if epsilon_close_plan(controller_config, start_pose, end_pose, CompareType.TRANSLATION):
@@ -126,14 +124,14 @@ def estimate_rotation_sequence(controller_config: ControllerConfig(),
 
             next_yaw = start_pose.rotation.yaw + curr_yaw_increment
 
-            next_pose = RealDozerPose(x=start_pose.position.x,
-                                      y=start_pose.position.y,
-                                      z=start_pose.position.z,
-                                      yaw=next_yaw,
-                                      pitch=end_pose.rotation.pitch,
-                                      roll=end_pose.rotation.roll,
-                                      v_x=0, v_y=0, v_z=0, timestamp=0,
-                                      vehicle_id=start_pose.vehicle_id)
+            next_pose = Pose(x=start_pose.position.x,
+                             y=start_pose.position.y,
+                             z=start_pose.position.z,
+                             yaw=next_yaw,
+                             pitch=end_pose.rotation.pitch,
+                             roll=end_pose.rotation.roll,
+                             v_x=0, v_y=0, v_z=0, timestamp=0,
+                             vehicle_id=start_pose.vehicle_id)
 
             pose_tuple = (next_pose, next_motor_command)
             curr_sequence.append(pose_tuple)
@@ -142,9 +140,8 @@ def estimate_rotation_sequence(controller_config: ControllerConfig(),
 
 
 def estimate_translation_sequence(controller_config: ControllerConfig(),
-                                  start_pose: Union[RealDozerPose, RealDozerAction],
-                                  end_pose: RealDozerAction):
-
+                                  start_pose: Union[Pose, Action],
+                                  end_pose: Action):
     if epsilon_close_plan(controller_config, start_pose, end_pose, CompareType.TRANSLATION):
         return
 
@@ -161,29 +158,31 @@ def estimate_translation_sequence(controller_config: ControllerConfig(),
         motor_command = MotorCommand.BACKWARD
 
     for idx in range(0, distance_steps - 1):
-        curr_x_step = start_pose.position.x + (idx + 1) * controller_config.max_distance_per_step * math.cos(curr_yaw / 180 * np.pi)
-        curr_y_step = start_pose.position.y + (idx + 1) * controller_config.max_distance_per_step * math.sin(curr_yaw / 180 * np.pi)
+        curr_x_step = start_pose.position.x + (idx + 1) * controller_config.max_distance_per_step * math.cos(
+            curr_yaw / 180 * np.pi)
+        curr_y_step = start_pose.position.y + (idx + 1) * controller_config.max_distance_per_step * math.sin(
+            curr_yaw / 180 * np.pi)
 
-        curr_pose = RealDozerPose(x=curr_x_step,
-                                  y=curr_y_step,
-                                  z=start_pose.position.z,
-                                  yaw=start_pose.rotation.yaw,
-                                  pitch=start_pose.rotation.pitch,
-                                  roll=start_pose.rotation.roll,
-                                  v_x=0, v_y=0, v_z=0, timestamp=0,
-                                  vehicle_id=start_pose.vehicle_id)
+        curr_pose = Pose(x=curr_x_step,
+                         y=curr_y_step,
+                         z=start_pose.position.z,
+                         yaw=start_pose.rotation.yaw,
+                         pitch=start_pose.rotation.pitch,
+                         roll=start_pose.rotation.roll,
+                         v_x=0, v_y=0, v_z=0, timestamp=0,
+                         vehicle_id=start_pose.vehicle_id)
 
         pose_tuple = (curr_pose, motor_command)
         curr_sequence.append(pose_tuple)
 
-    final_pose = RealDozerPose(x=end_pose.position.x,
-                               y=end_pose.position.y,
-                               z=end_pose.position.z,
-                               yaw=start_pose.rotation.yaw,
-                               pitch=start_pose.rotation.pitch,
-                               roll=start_pose.rotation.roll,
-                               v_x=0, v_y=0, v_z=0, timestamp=0,
-                               vehicle_id=start_pose.vehicle_id)
+    final_pose = Pose(x=end_pose.position.x,
+                      y=end_pose.position.y,
+                      z=end_pose.position.z,
+                      yaw=start_pose.rotation.yaw,
+                      pitch=start_pose.rotation.pitch,
+                      roll=start_pose.rotation.roll,
+                      v_x=0, v_y=0, v_z=0, timestamp=0,
+                      vehicle_id=start_pose.vehicle_id)
 
     pose_tuple = (final_pose, motor_command)
     curr_sequence.append(pose_tuple)

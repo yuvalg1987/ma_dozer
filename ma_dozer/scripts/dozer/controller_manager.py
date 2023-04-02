@@ -31,13 +31,11 @@ class DozerControlManager(Thread):
         self.dozer_publisher_ack: Publisher = Publisher(ip=self.config.dozer.ip,
                                                         port=self.config.dozer.ack_port)
 
-        # self.dozer_path_publisher: Publisher = Publisher(ip=self.config.dozer.ip,
-        #                                                  port=self.config.dozer.path_port)
-
         self.dozer_position_publisher: Publisher = Publisher(ip=self.config.dozer.ip,
                                                              port=self.config.dozer.kalman_position_port)
 
         self.logger: Logger = Logger()
+        self.enable_meas_log: bool = False
 
         self.controller: PIDController = PIDController(controller_config=self.config.dozer.controller,
                                                        logger=self.logger)
@@ -47,14 +45,28 @@ class DozerControlManager(Thread):
         self.imu_message_counter = 0
         self.imu_message_div = 5
 
+        self.init_imu_time_flag: bool = False
+        self.time_sync_imu_camera = 0
+
     def update_action(self, curr_topic: str, curr_data: str):
+        if curr_topic != self.config.topics.topic_algo_dozer_action:
+            return
 
         target_action = Action.from_zmq_str(curr_data)
 
         if target_action.is_init_action:
             curr_data = target_action.to_zmq_str()
+            self.init_pose = target_action.to_pose(time.time_ns())
+            self.curr_pose = target_action.to_pose()
+            self.enable_meas_log = True
+            self.init_imu_time_flag = True
+            self.is_finished = True
             self.dozer_publisher_ack.send(self.config.topics.topic_dozer_ack_received, curr_data)
-            print(f'Sent ACK_RECEIVED {target_action}')
+            print(f'Sent init ACK_RECEIVED {target_action}')
+            self.dozer_publisher_ack.send(self.config.topics.topic_dozer_ack_finished, curr_data)
+            print(f'Sent init ACK_FINISHED {self.target_action}')
+            self.action_update_flag = False
+            self.logger.log_camera_gt(self.curr_pose)
             return
 
         self.target_action = target_action
@@ -86,6 +98,14 @@ class DozerControlManager(Thread):
             curr_imu_measurement = IMUData.from_zmq_str(curr_data)
             strap_down_measurement = self.pose_estimator.update_imu_measurement(curr_imu_measurement)
 
+            if self.init_imu_time_flag:
+                self.time_sync_imu_camera = curr_imu_measurement.timestamp - self.init_pose.timestamp
+                self.init_imu_time_flag = False
+
+            if self.enable_meas_log:
+                curr_imu_measurement.timestamp -= self.time_sync_imu_camera
+                self.logger.log_imu_readings(curr_imu_measurement)
+
             rotation_rad = strap_down_measurement.att
             rotation_deg = rotation_rad / np.pi * 180
 
@@ -111,6 +131,14 @@ class DozerControlManager(Thread):
     def update_pose_aruco(self, curr_topic: str, curr_data: str):
 
         curr_aruco_pose = Pose.from_zmq_str(curr_data)
+
+        if curr_topic == self.config.topics.topic_dozer_position and self.enable_meas_log:
+            self.logger.log_camera_gt(curr_aruco_pose)
+        elif curr_topic == self.config.topics.topic_estimated_dozer_position and self.enable_meas_log:
+            self.logger.log_camera_est(curr_aruco_pose)
+
+        if self.config.use_estimated_aruco_pose and curr_topic == self.config.topics.topic_dozer_position:
+            return
 
         if self.config.dozer.controller.use_ekf:
 

@@ -1,5 +1,5 @@
-from ma_dozer.configs.nodes_config import Topics, CameraNodeConfig, AlgoNode, DozerNode, DumperNode
-from pydantic_config import BaseConfig
+from ma_dozer.configs.nodes_config import Topics, CameraNode, AlgoNode, DozerNode, DumperNode
+from ma_dozer.configs.pydantic_config import BaseConfig
 
 
 class Config(BaseConfig):
@@ -12,4 +12,5 @@ class Config(BaseConfig):
     dumper: DumperNode = DumperNode()
 
     dozer_aruco_idx: int = 3
-    use_estimated_aruco_pose = True
+    dumper_aruco_idx: int = 4
+    use_estimated_aruco_pose = False

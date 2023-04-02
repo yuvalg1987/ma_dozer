@@ -31,15 +31,13 @@ class DumperControlManager(Thread):
         self.dumper_publisher_ack: Publisher = Publisher(ip=self.config.dumper.ip,
                                                          port=self.config.dumper.ack_port)
 
-        self.dumper_path_publisher: Publisher = Publisher(ip=self.config.dumper.ip,
-                                                          port=self.config.dumper.path_port)
-
         self.dumper_position_publisher: Publisher = Publisher(ip=self.config.dumper.ip,
                                                               port=self.config.dumper.kalman_position_port)
 
         self.logger: Logger = Logger()
+        self.enable_meas_log: bool = False
 
-        self.controller: PIDController = PIDController(controller_config=self.config.dumper.controller,
+        self.controller: PIDController = PIDController(controller_config=self.config.dozer.controller,
                                                        logger=self.logger)
 
         self.pose_init_stage = True
@@ -47,14 +45,28 @@ class DumperControlManager(Thread):
         self.imu_message_counter = 0
         self.imu_message_div = 5
 
+        self.init_imu_time_flag: bool = False
+        self.time_sync_imu_camera = 0
+
     def update_action(self, curr_topic: str, curr_data: str):
+        if curr_topic != self.config.topics.topic_algo_dumper_action:
+            return
 
         target_action = Action.from_zmq_str(curr_data)
 
         if target_action.is_init_action:
             curr_data = target_action.to_zmq_str()
-            self.dumper_publisher_ack.send(self.config.topics.topic_dozer_ack_received, curr_data)
+            self.init_pose = target_action.to_pose(time.time_ns())
+            self.curr_pose = target_action.to_pose()
+            self.enable_meas_log = True
+            self.init_imu_time_flag = True
+            self.is_finished = True
+            self.dumper_publisher_ack.send(self.config.topics.topic_dumper_ack_received, curr_data)
             print(f'Sent ACK_RECEIVED {target_action}')
+            self.dumper_publisher_ack.send(self.config.topics.topic_dumper_ack_finished, curr_data)
+            print(f'Sent init ACK_FINISHED {self.target_action}')
+            self.action_update_flag = False
+            self.logger.log_camera_gt(self.curr_pose)
             return
 
         self.target_action = target_action
@@ -69,6 +81,7 @@ class DumperControlManager(Thread):
                               self.curr_pose,
                               self.target_action,
                               CompareType.ALL):
+
             self.is_finished = True
             curr_data = self.target_action.to_zmq_str()
             self.dumper_publisher_ack.send(self.config.topics.topic_dumper_ack_finished, curr_data)
@@ -84,6 +97,14 @@ class DumperControlManager(Thread):
 
             curr_imu_measurement = IMUData.from_zmq_str(curr_data)
             strap_down_measurement = self.pose_estimator.update_imu_measurement(curr_imu_measurement)
+
+            if self.init_imu_time_flag:
+                self.time_sync_imu_camera = curr_imu_measurement.timestamp - self.init_pose.timestamp
+                self.init_imu_time_flag = False
+
+            if self.enable_meas_log:
+                curr_imu_measurement.timestamp -= self.time_sync_imu_camera
+                self.logger.log_imu_readings(curr_imu_measurement)
 
             rotation_rad = strap_down_measurement.att
             rotation_deg = rotation_rad / np.pi * 180
@@ -110,6 +131,14 @@ class DumperControlManager(Thread):
     def update_pose_aruco(self, curr_topic: str, curr_data: str):
 
         curr_aruco_pose = Pose.from_zmq_str(curr_data)
+
+        if curr_topic == self.config.topics.topic_dozer_position and self.enable_meas_log:
+            self.logger.log_camera_gt(curr_aruco_pose)
+        elif curr_topic == self.config.topics.topic_estimated_dozer_position and self.enable_meas_log:
+            self.logger.log_camera_est(curr_aruco_pose)
+
+        if self.config.use_estimated_aruco_pose and curr_topic == self.config.topics.topic_dumper_position:
+            return
 
         if self.config.dumper.controller.use_ekf:
 
@@ -158,9 +187,9 @@ class DumperControlManager(Thread):
 
                 while not self.is_finished:
 
-                    if self.target_action is not None and motion_type is not None:
+                    if self.target_action is not None:  # and motion_type is not None
 
-                        self.controller.update_target_pose(self.target_action, motion_type)
+                        self.controller.update_target_pose(self.target_action)
                         self.controller.move_to_pose()
 
                         self.is_finished = epsilon_close_plan(self.config.dumper.controller,

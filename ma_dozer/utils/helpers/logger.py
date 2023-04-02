@@ -16,6 +16,7 @@ def init_exp_folder():
     return folder_location, svo_file_location, course_log_file
 
 
+
 class Logger:
 
     def __init__(self):
@@ -26,22 +27,16 @@ class Logger:
         self.controller_log_location, \
         self.svo_file_location = init_exp_folder() # TODO fix
 
-        self.planner_log_file = open(self.planner_log_location, "wb")
         self.controller_log_file = open(self.controller_log_location, "wb")
 
-    def log_course(self, curr_course, curr_pose, target_action):
+        self.imu_file = open('./imu_meas.csv', 'w')
+        self.imu_file.write('time,x,y,z,yaw,pitch,roll\n')
 
-        self.planner_log_file.write(f'curr_pose = {curr_pose}'.encode() + '\n'.encode() )
-        self.planner_log_file.write(f'target_action = {target_action}'.encode() + '\n'.encode())
+        self.camera_gt_file = open('./camera_gt_meas.csv', 'w')
+        self.camera_gt_file.write('time,x,y,z,yaw,pitch,roll\n')
 
-        self.planner_log_file.write('current_course:'.encode() + '\n'.encode())
-
-        for curr_pose_tmp in curr_course:
-            self.planner_log_file.write(
-                f'curr_pose = {curr_pose_tmp[0]}'.encode() + f' curr_action = {curr_pose_tmp[1]}'.encode() + '\n'.encode())
-
-        self.planner_log_file.write('end of course:'.encode() + '\n\n'.encode())
-        return
+        self.camera_file = open('./camera_meas.csv', 'w')
+        self.camera_file.write('time,x,y,z,yaw,pitch,roll\n')
 
     def log_controller_step(self, curr_pose, target_pose, curr_motor_command, curr_delta_eps):
 
@@ -58,3 +53,14 @@ class Logger:
         self.controller_log_file.write(f'curr_motor_command = {curr_motor_command}'.encode() + '\n'.encode())
         self.controller_log_file.write('\n'.encode())
 
+    def log_imu_readings(self, imu_sample: IMUData):
+        self.imu_file.write(imu_sample.to_log_str() + '\n')
+        self.imu_file.flush()
+
+    def log_camera_gt(self, camera_meas: Pose):
+        self.camera_gt_file.write(camera_meas.to_log_str() + '\n')
+        self.camera_gt_file.flush()
+
+    def log_camera_est(self, camera_meas: Pose):
+        self.camera_file.write(camera_meas.to_log_str() + '\n')
+        self.camera_file.flush()

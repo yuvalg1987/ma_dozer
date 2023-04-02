@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import (QMainWindow)
 from typing import Union
 
-from ma_dozer.scripts.dozer.controller_manager import DozerControlManager
+from ma_dozer.scripts.dozer.dozer_controller_manager import DozerControlManager
 from ma_dozer.scripts.dumper.dumper_controller_manager import DumperControlManager
 from ma_dozer.utils.gui.ui_form import Ui_Form
 

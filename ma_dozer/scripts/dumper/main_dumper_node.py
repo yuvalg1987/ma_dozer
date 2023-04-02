@@ -18,32 +18,30 @@ def main():
 
     control_manager = DumperControlManager(config=config)
 
-    if config.use_estimated_aruco_pose:
-        aruco_position_subscriber = ThreadedSubscriber(topics=[config.topics.topic_estimated_dumper_position],
-                                                       ip=config.camera.ip,
+    aruco_est_position_subscriber = ThreadedSubscriber(ip=config.camera.ip,
                                                        port=config.camera.estimated_position_port,
-                                                       callback_func=control_manager.update_pose_aruco)
-    else:
-        aruco_position_subscriber = ThreadedSubscriber(topics=[config.topics.topic_dumper_position],
-                                                       ip=config.camera.ip,
-                                                       port=config.camera.position_port,
+                                                       topics=[config.topics.topic_estimated_dumper_position],
                                                        callback_func=control_manager.update_pose_aruco)
 
-    action_subscriber = ThreadedSubscriber(topics=[config.topics.topic_algo_action],
-                                           ip=config.algo.ip,
+    aruco_gt_position_subscriber = ThreadedSubscriber(ip=config.camera.ip,
+                                                      port=config.camera.position_port,
+                                                      topics=[config.topics.topic_dumper_position],
+                                                      callback_func=control_manager.update_pose_aruco)
+
+    action_subscriber = ThreadedSubscriber(ip=config.algo.ip,
                                            port=config.algo.action_port,
+                                           topics=[config.topics.topic_algo_dumper_action],
                                            callback_func=control_manager.update_action)
 
     imu_measurement_subscriber = IMUSubscriber(imu_config=config.dumper,
                                                callback_func=control_manager.update_pose_imu)
 
-    aruco_position_subscriber.start()
+    aruco_est_position_subscriber.start()
+    aruco_gt_position_subscriber.start()
     action_subscriber.start()
     imu_measurement_subscriber.start()
 
     control_manager.start()
-
-    # TODO do not exit program
 
     app = QApplication(sys.argv)
     win = Window(control_manager)

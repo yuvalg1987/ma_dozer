@@ -1,4 +1,4 @@
-from pydantic_config import BaseConfig
+from ma_dozer.configs.pydantic_config import BaseConfig
 
 
 class ControllerConfig(BaseConfig):
@@ -20,4 +20,4 @@ class ControllerConfig(BaseConfig):
 
     print_control_mod: float = 5
     eps_bound_distance: float = 0
-    use_ekf: bool = True
+    use_ekf: bool = False
