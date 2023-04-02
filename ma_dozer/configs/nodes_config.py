@@ -34,13 +34,17 @@ class Topics(BaseConfig):
     topic_algo_dumper_action: str = "algo_dumper_action"
 
 
-class CameraNode(BaseConfig):
+class CameraNodeConfig(BaseConfig):
 
     ip: str = '192.168.0.100'
     color_image_port: int = 5555
     depth_image_port: int = 5556
-    position_port: int = 1234
-    estimated_position_port: int = 1235
+
+    dozer_position_port: int = 1234
+    dozer_estimated_position_port: int = 1235
+
+    dumper_position_port: int = 1236
+    dumper_estimated_position_port: int = 1237
 
     color_image_address: str = None
     depth_image_address: str = None
@@ -73,23 +77,30 @@ class CameraNode(BaseConfig):
     xaxis_marker_w: np.ndarray = np.load((camera_calibration_dir / 'xaxis_marker_w.npy').as_posix())
     yaxis_marker_w: np.ndarray = np.load((camera_calibration_dir / 'yaxis_marker_w.npy').as_posix())
 
-    aruco_position_added_noise_start: float = -2
-    aruco_position_added_noise_end: float = 2
-    aruco_rotation_added_noise_start: float = -2
-    aruco_rotation_added_noise_end: float = 2
+    dozer_aruco_position_added_noise_start: float = -2
+    dozer_aruco_position_added_noise_end: float = 2
+    dozer_aruco_rotation_added_noise_start: float = -2
+    dozer_aruco_rotation_added_noise_end: float = 2
+
+    dumper_aruco_position_added_noise_start: float = -2
+    dumper_aruco_position_added_noise_end: float = 2
+    dumper_aruco_rotation_added_noise_start: float = -2
+    dumper_aruco_rotation_added_noise_end: float = 2
 
     pcl_xy_pixel_size: float = 0.5
     marker_length: float = 11.8
     dozer_marker_length = 15.9
+    dumper_marker_length = 15.9
     pixel_density: float = np.float32(2.0)
     calibration_altitude_bias: float = 5
     bbox_low_percentile: int = 5
     bbox_high_percentile: int = 95
 
     inertial_aruco_marker_id: int = 0
-    yaxis_aruco_marker_id: int = 1
-    xaxis_aruco_marker_id: int = 2
-    dozer_aruco_marker_id: int = 3
+    yaxis_aruco_marker_id : int = 1
+    xaxis_aruco_marker_id : int = 2
+    dozer_aruco_marker_id : int = 3
+    dumper_aruco_marker_id: int = 4
 
     grid_height_w: int = None
     grid_width_w: int = None
@@ -171,7 +182,7 @@ class NetworkConfig(BaseConfig):
 
     topics: Topics = Topics()
 
-    camera_node: CameraNode = CameraNode()
+    camera_node: CameraNodeConfig = CameraNodeConfig()
     algo_node: AlgoNode = AlgoNode()
     dozer_node: DozerNode = DozerNode()
     dumper_node: DumperNode = DumperNode()

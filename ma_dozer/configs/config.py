@@ -6,7 +6,7 @@ class Config(BaseConfig):
 
     topics: Topics = Topics()
 
-    camera: CameraNode = CameraNode()
+    camera: CameraNodeConfig = CameraNodeConfig()
     algo: AlgoNode = AlgoNode()
     dozer: DozerNode = DozerNode()
     dumper: DumperNode = DumperNode()

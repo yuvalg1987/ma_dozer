@@ -328,11 +328,11 @@ class Pose:
                    vehicle_id=int(id_str))
 
     @classmethod
-    def from_position(cls,
-                      marker_id: int,
-                      position: Position,
-                      rotation: Rotation,
-                      timestamp: int):
+    def from_pos_rot(cls,
+                     marker_id: int,
+                     position: Position,
+                     rotation: Rotation,
+                     timestamp: int):
 
         dozer_pose = cls.from_classes(position=position,
                                       rotation=rotation,
