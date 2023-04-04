@@ -329,10 +329,10 @@ class Pose:
 
     @classmethod
     def from_pos_rot(cls,
-                     marker_id: int,
-                     position: Position,
-                     rotation: Rotation,
-                     timestamp: int):
+                      marker_id: int,
+                      position: Position,
+                      rotation: Rotation,
+                      timestamp: int):
 
         dozer_pose = cls.from_classes(position=position,
                                       rotation=rotation,
@@ -555,6 +555,7 @@ class IMUData:
                  delta_t: float,
                  delta_velocity: DeltaVelocity,
                  delta_theta: DeltaTheta):
+
         self.timestamp: int = timestamp
         self.delta_t: float = delta_t
         self.delta_velocity: DeltaVelocity = delta_velocity
@@ -567,9 +568,10 @@ class IMUData:
 
     @classmethod
     def from_array(cls, timestamp: int,
-                   delta_t: float,
-                   delta_velocity: DeltaVelocity,
-                   delta_theta: DeltaTheta):
+                        delta_t: float,
+                        delta_velocity: DeltaVelocity,
+                        delta_theta: DeltaTheta):
+
         return cls(timestamp=timestamp,
                    delta_velocity=DeltaVelocity(dv_x=delta_velocity.dv_x,
                                                 dv_y=delta_velocity.dv_y,
@@ -581,11 +583,12 @@ class IMUData:
 
     @classmethod
     def from_zmq_str(cls, measurement_str: str):
+
         timestamp_str, \
         delta_t_str, \
         delta_velocity_x_str, \
         delta_velocity_y_str, \
-        delta_velocity_z_str, \
+        delta_velocity_z_str,  \
         delta_theta_yaw_str, \
         delta_theta_pitch_str, \
         delta_theta_roll_str = measurement_str.split('#')
@@ -600,6 +603,7 @@ class IMUData:
                                           delta_roll=float(delta_theta_roll_str)))
 
     def to_zmq_str(self):
+
         return f'{self.timestamp}#{self.delta_t}#' \
                f'{self.delta_velocity.dv_x}#{self.delta_velocity.dv_y}#{self.delta_velocity.dv_z}#' \
                f'{self.delta_theta.delta_yaw}#{self.delta_theta.delta_pitch}#{self.delta_theta.delta_roll}'

@@ -1,12 +1,9 @@
 import cv2
-import math
 import sys
 import numpy as np
 
 sys.path.append('.')
 sys.path.append('../')
-
-from utils.general_utils import Pose
 
 ARUCO_DICT = {
     "4X4_50": cv2.aruco.DICT_4X4_50,

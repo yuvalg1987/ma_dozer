@@ -1,5 +1,10 @@
 import os
 import time
+from pathlib import Path
+
+from ma_dozer.utils.helpers.classes import IMUData, Pose
+
+dozer_prototype_path = Path(__file__).parent
 
 
 def init_exp_folder():

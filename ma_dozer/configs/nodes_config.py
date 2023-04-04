@@ -1,12 +1,17 @@
 import numpy as np
+import cupy as cp
 import os
 from pathlib import Path
 from ma_dozer.configs.controller_config import ControllerConfig
 from ma_dozer.configs.navigation_config import NavigationConfig
-from ma_dozer.configs.pydantic_config import BaseConfig
+from ma_dozer.configs.pydantic_config import BaseModel
 
+from ma_dozer.camera_calibration import camera_calibration_dir
 
-class Topics(BaseConfig):
+from pydantic import validator
+
+class Topics(BaseModel):
+
     # Dozer Topics:
     topic_dozer_position: str = "dozer_position"
     topic_estimated_dozer_position: str = "estimated_dozer_position"
@@ -15,7 +20,6 @@ class Topics(BaseConfig):
     topic_dozer_ack_finished: str = "dozer_ack_finished"
     topic_dozer_ack_received: str = "dozer_ack_received"
     topic_dozer_ack_intermediate_state: str = "topic_dozer_ack_intermediate_state"
-    # topic_dozer_path: str = "dozer_path"
 
     # Dumper Topics:
     topic_dumper_position: str = "dumper_position"
@@ -25,7 +29,6 @@ class Topics(BaseConfig):
     topic_dumper_ack_finished: str = "dumper_ack_finished"
     topic_dumper_ack_received: str = "dumper_ack_received"
     topic_dumper_ack_intermediate_state: str = "topic_dumper_ack_intermediate_state"
-    # topic_dumper_path: str = "dumper_path"
 
     topic_color_image: str = "color_image"
     topic_depth_image: str = "depth_image"
@@ -34,7 +37,7 @@ class Topics(BaseConfig):
     topic_algo_dumper_action: str = "algo_dumper_action"
 
 
-class CameraNodeConfig(BaseConfig):
+class CameraNodeConfig(BaseModel):
 
     ip: str = '192.168.0.100'
     color_image_port: int = 5555
@@ -56,7 +59,6 @@ class CameraNodeConfig(BaseConfig):
     channel_num: int = 3
     record_video: bool = False
 
-    camera_calibration_dir = Path(__file__).parent / '..' / '..' / 'camera_calibration'
     intrinsics_h: np.ndarray = np.load((camera_calibration_dir / 'intrinsics_params.npy').as_posix())
     rot_c2w_h: np.ndarray    = np.load((camera_calibration_dir / 'rot_c2w.npy').as_posix())
     t_w2c_w_h: np.ndarray    = np.load((camera_calibration_dir / 't_w2c_w.npy').as_posix())
@@ -89,8 +91,8 @@ class CameraNodeConfig(BaseConfig):
 
     pcl_xy_pixel_size: float = 0.5
     marker_length: float = 11.8
-    dozer_marker_length = 15.9
-    dumper_marker_length = 15.9
+    dozer_marker_length = 15.2
+    dumper_marker_length = 15.2
     pixel_density: float = np.float32(2.0)
     calibration_altitude_bias: float = 5
     bbox_low_percentile: int = 5
@@ -109,36 +111,54 @@ class CameraNodeConfig(BaseConfig):
     grid_height_c: int = None
     grid_width_c: int = None
 
-    intrinsics_d: float = None
-    rot_c2w_d: float = None
-    t_w2c_w_d: float = None
+    intrinsics_d: cp.ndarray = None
+    rot_c2w_d: cp.ndarray = None
+    t_w2c_w_d: cp.ndarray = None
 
-    lower_bound_d: int = None
-    upper_bound_d: int = None
+    lower_bound_d: cp.ndarray = None
+    upper_bound_d: cp.ndarray = None
 
-    def __post_init__(self):
+    @validator("color_image_address", always=True)
+    def init_color_image_address(cls, v, values):
+        return f'tcp://{values["ip"]}:{values["color_image_port"]}'
 
-        if os.path.isfile(self.grid_size_w_path):
-            grid_size_w = np.load(self.grid_size_w_path)
-            self.grid_height_w = grid_size_w[0]
-            self.grid_width_w = grid_size_w[1]
+    @validator("depth_image_address", always=True)
+    def init_depth_image_address(cls, v, values):
+        return f'tcp://{values["ip"]}:{values["depth_image_port"]}'
 
-        if os.path.isfile(self.grid_size_w_crop_path):
-            grid_size_w_crop = np.load(self.grid_size_w_crop_path)
-            self.grid_height_w_crop = grid_size_w_crop[0]
-            self.grid_width_w_crop = grid_size_w_crop[1]
+    @validator("grid_height_w", always=True)
+    def init_grid_height_w(cls, v, values):
+        grid_size_w = np.load(values['grid_size_w_path'])
+        return grid_size_w[0]
 
-        if os.path.isfile(self.grid_size_c_path):
-            grid_size_c = np.load(self.grid_size_c_path)
-            self.grid_height_c = grid_size_c[0]
-            self.grid_width_c = grid_size_c[1]
+    @validator("grid_width_w", always=True)
+    def init_grid_width_w(cls, v, values):
+        grid_size_w = np.load(values['grid_size_w_path'])
+        return grid_size_w[1]
 
-    def __post_init__(self):
-        self.color_image_address = f'tcp://{self.ip}:{self.color_image_port}'
-        self.depth_image_address = f'tcp://{self.ip}:{self.depth_image_port}'
+    @validator("grid_height_w_crop", always=True)
+    def init_grid_height_w_crop(cls, v, values):
+        grid_size_w_crop = np.load(values['grid_size_w_crop_path'])
+        return grid_size_w_crop[0]
+
+    @validator("grid_width_w_crop", always=True)
+    def init_grid_width_w_crop(cls, v, values):
+        grid_size_w_crop = np.load(values['grid_size_w_crop_path'])
+        return grid_size_w_crop[1]
+
+    @validator("grid_height_c", always=True)
+    def init_grid_height_c(cls, v, values):
+        grid_size_c = np.load(values['grid_size_c_path'])
+        return grid_size_c[0]
+
+    @validator("grid_width_c", always=True)
+    def init_grid_width_c(cls, v, values):
+        grid_size_c = np.load(values['grid_size_c_path'])
+        return grid_size_c[1]
 
 
-class DozerNode(BaseConfig):
+
+class DozerNode(BaseModel):
 
     ip: str = '192.168.0.101'
     ack_port: int = 1235
@@ -147,7 +167,7 @@ class DozerNode(BaseConfig):
 
     action_file_path = './1_actions.txt'
 
-    imu_port = '/dev/ttyUSB0'  # 'COM7 or COM8 for Windows
+    imu_port = '/dev/ttyUSB0' # 'COM7 or COM8 for Windows
     imu_baud_rate = 115200
     kalman_position_port: int = 1237
 
@@ -155,7 +175,7 @@ class DozerNode(BaseConfig):
     navigation: NavigationConfig = NavigationConfig()
 
 
-class DumperNode(BaseConfig):
+class DumperNode(BaseModel):
 
     ip: str = '192.168.0.102'
     ack_port: int = 1235
@@ -172,13 +192,13 @@ class DumperNode(BaseConfig):
     navigation: NavigationConfig = NavigationConfig()
 
 
-class AlgoNode(BaseConfig):
+class AlgoNode(BaseModel):
 
     ip: str = '192.168.0.103'
     action_port: int = 1236
 
 
-class NetworkConfig(BaseConfig):
+class NetworkConfig(BaseModel):
 
     topics: Topics = Topics()
 
