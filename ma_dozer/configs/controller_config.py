@@ -1,7 +1,7 @@
-from ma_dozer.configs.pydantic_config import BaseConfig
+from ma_dozer.configs.pydantic_config import BaseModel
 
 
-class ControllerConfig(BaseConfig):
+class ControllerConfig(BaseModel):
 
     controller_debug_mode: bool = False
     controller_debug_x_increment: float = 1
@@ -20,4 +20,4 @@ class ControllerConfig(BaseConfig):
 
     print_control_mod: float = 5
     eps_bound_distance: float = 0
-    use_ekf: bool = False
+    use_ekf: bool = True

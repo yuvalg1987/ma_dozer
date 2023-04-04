@@ -1,5 +1,7 @@
 import pydantic
 
+class BaseModel(pydantic.BaseModel):
 
-class BaseConfig(pydantic.BaseModel, extra=pydantic.Extra.forbid, arbitrary_types_allowed=True):
-    pass
+    class Config:
+        arbitrary_types_allowed = True
+        extra = pydantic.Extra.forbid

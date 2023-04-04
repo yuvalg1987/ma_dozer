@@ -6,7 +6,6 @@ import math
 import cupyx.scipy.ndimage.filters as filters
 from cupyx.time import repeat
 
-import utils.general_config as general_config
 
 
 ###################
@@ -288,6 +287,7 @@ def project_pcl_to_xy(pcl_xyzbgr_d,
 
 def project_pcl_to_xy_tester(color_image_h, depth_image_h,
                              intrinsics_h, rot_c2w_h, t_w2c_w_h):
+
     depth_image_d = cp.asarray(depth_image_h, dtype=cp.float32)
 
     image_height, image_width = depth_image_d.shape
