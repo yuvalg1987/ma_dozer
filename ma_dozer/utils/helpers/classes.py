@@ -167,149 +167,6 @@ class DeltaTheta(np.ndarray):
     def from_array(cls, delta_theta: np.ndarray):
         return cls(delta_theta[0], delta_theta[1], delta_theta[2])
 
-class Action:
-
-    def __init__(self,
-                 x: float = 0,
-                 y: float = 0,
-                 z: float = 0,
-                 yaw: float = 0,
-                 pitch: float = 0,
-                 roll: float = 0,
-                 forward_movement: bool = True,
-                 velocity_gear: int = 1,
-                 vehicle_id: int = 3,
-                 is_init_action: bool = False,
-                 motion_type: MotorCommand = MotorCommand.FORWARD):
-
-        # this is given in meters and distance relative to dozer current location
-        self._position: Position = Position(x, y, z)
-        # this is given in degrees and is the angle compared to current angle
-        self._rotation: Rotation = Rotation(yaw, pitch, roll)
-        self._forward_movement: bool = forward_movement
-        self.motion_type: MotorCommand = motion_type
-        self._velocity_gear: int = velocity_gear
-        self.vehicle_id: int = vehicle_id
-        self.is_init_action = is_init_action
-
-    @classmethod
-    def from_arrays(cls,
-                    position: np.ndarray,
-                    rotation: np.ndarray,
-                    forward_movement: bool,
-                    velocity_gear: int = 1,
-                    vehicle_id: int = 3):
-
-        position_flat = position.flatten()
-        rotation_flat = rotation.flatten()
-
-        return cls(x=position_flat[0],
-                   y=position_flat[1],
-                   z=position_flat[2],
-                   yaw=rotation_flat[0],
-                   pitch=rotation_flat[1],
-                   roll=rotation_flat[2],
-                   forward_movement=forward_movement,
-                   velocity_gear=velocity_gear,
-                   vehicle_id=vehicle_id)
-
-    @classmethod
-    def from_classes(cls, position: Position,
-                     rotation: Rotation,
-                     forward_movement: bool,
-                     velocity_gear: int = 1,
-                     vehicle_id: int = 3):
-
-        return cls.from_arrays(position=position,
-                               rotation=rotation,
-                               forward_movement=forward_movement,
-                               velocity_gear=velocity_gear,
-                               vehicle_id=vehicle_id)
-
-    @property
-    def position(self):
-        return self._position
-
-    @property
-    def rotation(self):
-        return self._rotation
-
-    @property
-    def forward_movement(self):
-        return self._forward_movement
-
-    @property
-    def velocity_gear(self):
-        return self._velocity_gear
-
-    def __eq__(self, other):
-        # if isinstance(other, Action):
-        #     return self.__key() == other.__key()
-        # else:
-        #     return False
-        x_close = np.isclose(self.position.x, other.position.x, atol=1e-3)
-        y_close = np.isclose(self.position.y, other.position.y, atol=1e-3)
-        z_close = np.isclose(self.position.z, other.position.z, atol=1e-3)
-        pitch_close = np.isclose(self.rotation.euler.pitch, other.rotation.euler.pitch, atol=1e-3)
-        # yaw_close = np.isclose(self.yaw, other.yaw, atol=1e-3)
-        roll_close = np.isclose(self.rotation.euler.roll, other.rotation.euler.roll, atol=1e-3)
-        action_close = self.forward_movement == other.forward_movement
-        # if x_close and y_close and z_close and pitch_close and yaw_close and roll_close and action_close:
-        if x_close and y_close and z_close and pitch_close and roll_close and action_close:
-            return True
-        else:
-            return False
-
-    def __hash__(self):
-        return hash((self.position.x,
-                     self.position.y,
-                     self.position.z,
-                     self.rotation.euler.pitch,
-                     self.rotation.euler.roll,
-                     self.forward_movement))
-
-    def __str__(self):
-        return f'id = {self.vehicle_id}, ' + \
-               f'X = {self.position.x:.3f}, ' + \
-               f'Y = {self.position.y:.3f}, ' + \
-               f'Z = {self.position.z:.3f}, ' + \
-               f'Yaw = {self.rotation.euler.yaw:.3f}, ' + \
-               f'Pitch = {self.rotation.euler.pitch:.3f}, ' + \
-               f'Roll = {self.rotation.euler.roll:.3f}'
-
-    def to_zmq_str(self):
-
-        if self.forward_movement:
-            action_type = MotorCommand.FORWARD
-        else:
-            action_type = MotorCommand.BACKWARD
-
-        return f'{self.vehicle_id}#' + \
-               f'{self.position.x}#' + \
-               f'{self.position.y}#' + \
-               f'{self.position.z}#' + \
-               f'{self.rotation.euler.yaw}#' + \
-               f'{self.rotation.euler.pitch}#' + \
-               f'{self.rotation.euler.roll}#' + \
-               f'{action_type}#' + \
-               f'{self.is_init_action}'
-
-    @classmethod
-    def from_zmq_str(cls, pos_str: str):
-
-        id_str, x_str, y_str, z_str, yaw_str, pitch_str, roll_str, action_type_str, is_init_action_str = pos_str.split('#')
-        curr_action_type = action_type_str.split('.')[1]
-
-        if curr_action_type == 'FORWARD':
-            forward_movement = True
-        else:
-            forward_movement = False
-
-        return cls(x=float(x_str), y=float(y_str), z=float(z_str),
-                   yaw=float(yaw_str), pitch=float(pitch_str), roll=float(roll_str),
-                   forward_movement=forward_movement, vehicle_id=int(id_str), is_init_action=str2bool(is_init_action_str))
-
-
 
 class Pose:
 
@@ -471,7 +328,7 @@ class Pose:
                    vehicle_id=int(id_str))
 
     @classmethod
-    def from_position(cls,
+    def from_pos_rot(cls,
                       marker_id: int,
                       position: Position,
                       rotation: Rotation,
@@ -651,6 +508,45 @@ class Action:
                    forward_movement=forward_movement, vehicle_id=int(id_str),
                    is_init_action=str2bool(is_init_action_str.strip()))
 
+    @classmethod
+    def from_pose(cls, pose: Pose):
+        action = cls(pose.position.x,
+                     pose.position.y,
+                     pose.position.z,
+                     pose.rotation.euler.yaw,
+                     pose.rotation.euler.pitch,
+                     pose.rotation.euler.roll,
+                     forward_movement=False,
+                     is_init_action=False,
+                     vehicle_id=pose.vehicle_id)
+
+        return action
+
+    def to_pose(self, timestamp: Optional[int] = None):
+        pose = Pose(self.position.x,
+                    self.position.y,
+                    self.position.z,
+                    self.rotation.yaw,
+                    self.rotation.pitch,
+                    self.rotation.roll)
+        if timestamp is not None:
+            pose.update_timestamp(timestamp)
+        return pose
+
+    def __add__(self, other):
+        pos_x = self.position.x + other.position.x
+        pos_y = self.position.y + other.position.y
+        pos_z = self.position.z + other.position.z
+        rot_yaw = self.rotation.yaw + other.rotation.yaw
+        rot_pitch = self.rotation.pitch + other.rotation.pitch
+        rot_roll = self.rotation.roll + other.rotation.roll
+
+        return Action(pos_x, pos_y, pos_z,
+                      rot_yaw, rot_pitch, rot_roll,
+                      forward_movement=self.forward_movement,
+                      vehicle_id=self.vehicle_id,
+                      is_init_action=self.is_init_action,
+                      motion_type=self.motion_type)
 
 
 class IMUData:
@@ -661,7 +557,7 @@ class IMUData:
                  delta_theta: DeltaTheta):
 
         self.timestamp: int = timestamp
-        self.delta_t : float = delta_t
+        self.delta_t: float = delta_t
         self.delta_velocity: DeltaVelocity = delta_velocity
         self.delta_theta: DeltaTheta = delta_theta
 
@@ -711,3 +607,50 @@ class IMUData:
         return f'{self.timestamp}#{self.delta_t}#' \
                f'{self.delta_velocity.dv_x}#{self.delta_velocity.dv_y}#{self.delta_velocity.dv_z}#' \
                f'{self.delta_theta.delta_yaw}#{self.delta_theta.delta_pitch}#{self.delta_theta.delta_roll}'
+
+    def to_log_str(self):
+        return ','.join((self.timestamp,
+                        self.delta_t,
+                        self.delta_velocity.dv_x,
+                        self.delta_velocity.dv_y,
+                        self.delta_velocity.dv_z,
+                        self.delta_theta.delta_yaw,
+                        self.delta_theta.delta_pitch,
+                        self.delta_theta.delta_roll))
+
+
+@dataclass
+class BaseClass(yaml.YAMLObject):
+    yaml_loader = yaml.SafeLoader
+
+    @classmethod
+    def from_yaml(cls, loader, node):
+        values = loader.construct_mapping(node, deep=True)
+        return cls(**values)
+
+    @classmethod
+    def from_str(cls, yaml_str):
+        data = yaml.safe_load(yaml_str)
+        return cls(**data)
+
+    @classmethod
+    def to_yaml(cls, dumper, data):
+        return dumper.represent_yaml_object(cls.yaml_tag, data, cls, flow_style=cls.yaml_flow_style)
+
+    def update(self, other):
+        class_keys = self.__dict__.keys()
+
+        for key in class_keys:
+            if type(self.__dict__[key]) in basic_types:
+                self.__dict__[key] = getattr(other, key)
+            else:
+                self.__dict__[key].update(getattr(other, key))
+
+
+class NavState(BaseClass):
+
+    def __init__(self, time, pos, vel, att):
+        self.time: float = time
+        self.pos: np.ndarray = pos
+        self.vel: np.ndarray = vel
+        self.att: np.ndarray = att

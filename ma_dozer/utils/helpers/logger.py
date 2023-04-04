@@ -10,20 +10,16 @@ dozer_prototype_path = Path(__file__).parent
 def init_exp_folder():
 
     timestamp = time.strftime("%m%d_%H%M%S")
-    folder_name = f"exp_{timestamp.split('_')[0][2:]}_" + \
-                      f"{timestamp.split('_')[0][:2]}_" + \
-                      f"{timestamp.split('_')[1][:2]}_" + \
-                      f"{timestamp.split('_')[1][2:4]}"
-
-    folder_location = os.path.abspath(f'{dozer_prototype_path}/data/{folder_name}')
-    planner_log_location = os.path.abspath(f'{folder_location}/planner_logger.txt')
-    controller_log_location = os.path.abspath(f'{folder_location}/controller_logger.txt')
-    svo_file_location = os.path.abspath(f'{folder_location}/{folder_name}.svo')
+    datestamp = f"exp_{timestamp.split('_')[0][2:]}_{timestamp.split('_')[0][:2]}"
+    folder_location = os.path.abspath(f'../data/{datestamp}')
+    svo_file_location = os.path.abspath(f'{folder_location}/exp_{timestamp}.svo')
+    course_log_file = os.path.abspath(f'{folder_location}/exp_{timestamp}.txt')
 
     if not (os.path.exists(folder_location)):
         os.makedirs(folder_location)
 
-    return folder_location, planner_log_location, controller_log_location, svo_file_location
+    return folder_location, svo_file_location, course_log_file
+
 
 
 class Logger:
@@ -34,7 +30,7 @@ class Logger:
         self.folder_location, \
         self.planner_log_location, \
         self.controller_log_location, \
-        self.svo_file_location = init_exp_folder()
+        self.svo_file_location = init_exp_folder() # TODO fix
 
         self.controller_log_file = open(self.controller_log_location, "wb")
 
