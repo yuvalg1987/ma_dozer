@@ -1,5 +1,11 @@
 import numpy as np
-import cupy as cp
+import subprocess
+try:
+    subprocess.check_output('nvidia-smi')
+    import cupy as cp
+except Exception:
+    import numpy as cp
+
 import os
 from pathlib import Path
 from ma_dozer.configs.controller_config import ControllerConfig
@@ -9,6 +15,7 @@ from ma_dozer.configs.pydantic_config import BaseModel
 from ma_dozer.camera_calibration import camera_calibration_dir
 
 from pydantic import validator
+
 
 class Topics(BaseModel):
 
@@ -155,7 +162,6 @@ class CameraNodeConfig(BaseModel):
     def init_grid_width_c(cls, v, values):
         grid_size_c = np.load(values['grid_size_c_path'])
         return grid_size_c[1]
-
 
 
 class DozerNode(BaseModel):

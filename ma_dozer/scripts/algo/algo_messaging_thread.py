@@ -43,39 +43,49 @@ class AlgoMessagingThread(Thread):
                                                  config.topics.topic_dumper_ack_finished])
 
         # subscriber, camera -> algo, dozer current position
-        self.position_subscriber = Subscriber(ip=config.camera.ip,
-                                              port=config.camera.position_port,
-                                              topics=[config.topics.topic_dozer_position,
-                                                      config.topics.topic_dumper_position])
+        self.dozer_position_subscriber = Subscriber(ip=config.camera.ip,
+                                                    port=config.camera.dozer_position_port,
+                                                    topics=[config.topics.topic_dozer_position])
+
+        self.dumper_position_subscriber = Subscriber(ip=config.camera.ip,
+                                                     port=config.camera.dumper_position_port,
+                                                     topics=[config.topics.topic_dumper_position])
 
         self.subscriber_poller = zmq.Poller()
         self.subscriber_poller.register(self.ack_subscriber.get_socket(), zmq.POLLIN)
-        self.subscriber_poller.register(self.position_subscriber.get_socket(), zmq.POLLIN)
+        self.subscriber_poller.register(self.dozer_position_subscriber.get_socket(), zmq.POLLIN)
+        self.subscriber_poller.register(self.dumper_position_subscriber.get_socket(), zmq.POLLIN)
 
         self.init_connection()
 
     def init_connection(self):
 
         curr_dozer_action = None
+        curr_topic = None
+        curr_data = None
 
         flag_init_dozer_pos = False
         flag_init_dumper_pos = False
         while True:
             socks = dict(self.subscriber_poller.poll(20))  # 20ms
             if socks:
-                if (self.position_subscriber.get_socket() in socks and
-                        socks[self.position_subscriber.get_socket()] == zmq.POLLIN):
-                    curr_topic, curr_data = self.position_subscriber.receive()
-                    if curr_topic == self.config.topics.topic_dozer_position and not flag_init_dozer_pos:
-                        self.dozer_curr_pose = Pose.from_zmq_str(curr_data)
-                        flag_init_dozer_pos = True
-                    elif curr_topic == self.config.topics.topic_dumper_position and not flag_init_dumper_pos:
-                        self.dumper_curr_pose = Pose.from_zmq_str(curr_data)
-                        flag_init_dumper_pos = True
+                if (self.dozer_position_subscriber.get_socket() in socks and
+                        socks[self.dozer_position_subscriber.get_socket()] == zmq.POLLIN):
+                    curr_topic, curr_data = self.dozer_position_subscriber.receive()
+                elif (self.dumper_position_subscriber.get_socket() in socks and
+                        socks[self.dumper_position_subscriber.get_socket()] == zmq.POLLIN):
+                    curr_topic, curr_data = self.dumper_position_subscriber.receive()
 
-                    if flag_init_dozer_pos and flag_init_dumper_pos:
-                        print('got positions from camera')
-                        break
+                if curr_topic == self.config.topics.topic_dozer_position and not flag_init_dozer_pos:
+                    self.dozer_curr_pose = Pose.from_zmq_str(curr_data)
+                    flag_init_dozer_pos = True
+                elif curr_topic == self.config.topics.topic_dumper_position and not flag_init_dumper_pos:
+                    self.dumper_curr_pose = Pose.from_zmq_str(curr_data)
+                    flag_init_dumper_pos = True
+
+                if flag_init_dozer_pos and flag_init_dumper_pos:
+                    print('got positions from camera')
+                    break
 
         init_dozer_action = Action(x=self.dozer_curr_pose.position.x,
                                    y=self.dozer_curr_pose.position.y,
@@ -200,16 +210,17 @@ class AlgoMessagingThread(Thread):
                         print(f'ACK intermediate state from dumper for position = {curr_algo_action}')
                         self.dumper_ack_intermediate_state.append(curr_algo_action)
 
-                if (self.position_subscriber.get_socket() in socks and
-                        socks[self.position_subscriber.get_socket()] == zmq.POLLIN):
-
-                    curr_topic, curr_data = self.position_subscriber.receive()
+                if (self.dozer_position_subscriber.get_socket() in socks and
+                        socks[self.dozer_position_subscriber.get_socket()] == zmq.POLLIN):
+                    curr_topic, curr_data = self.dozer_position_subscriber.receive()
                     if curr_topic == self.config.topics.topic_dozer_position:
                         self.dozer_curr_pose = Pose.from_zmq_str(curr_data)
-                        print(f'Current dozer position {self.dozer_curr_pose}')
-                    elif curr_topic == self.config.topics.topic_dumper_position:
+                        # print(f'Current dozer position {self.dozer_curr_pose}')
+                elif (self.dumper_position_subscriber.get_socket() in socks and
+                        socks[self.dumper_position_subscriber.get_socket()] == zmq.POLLIN):
+                    if curr_topic == self.config.topics.topic_dumper_position:
                         self.dumper_curr_pose = Pose.from_zmq_str(curr_data)
-                        print(f'Current dumper position {self.dumper_curr_pose}')
+                        # print(f'Current dumper position {self.dumper_curr_pose}')
 
                 else:
                     pass
