@@ -14,6 +14,8 @@ import ma_dozer.configs.camera_globals as camera_globals
 import ma_dozer.utils.helpers.visualization as viz
 from ma_dozer.utils.camera.aruco_utils import ArucoDetector
 
+from scipy.stats import uniform
+
 import cv2
 
 
@@ -44,11 +46,21 @@ def main():
     dozer_position_publisher = Publisher(ip=config.camera.ip, port=config.camera.dozer_position_port)
     dumper_position_publisher = Publisher(ip=config.camera.ip, port=config.camera.dumper_position_port)
 
+    dozer_position_estimated_publisher = Publisher(ip=config.camera.ip,
+                                                   port=config.camera.dozer_estimated_position_port)
+
     color_camera_publisher = imagezmq.ImageSender(connect_to=config.camera.color_image_address, REQ_REP=False)
     depth_camera_publisher = imagezmq.ImageSender(connect_to=config.camera.depth_image_address, REQ_REP=False)
 
     cv2.namedWindow("Original Image", cv2.WINDOW_NORMAL)
     cv2.namedWindow("Original Depth", cv2.WINDOW_NORMAL)
+
+    dozer_aruco_position_noise_rvs = uniform(loc=config.camera.dozer_aruco_position_added_noise_start,
+                                             scale=config.camera.dozer_aruco_position_added_noise_end -
+                                                   config.camera.dozer_aruco_position_added_noise_start)
+    dozer_aruco_rotation_noise_rvs = uniform(loc=config.camera.dozer_aruco_rotation_added_noise_start,
+                                             scale=config.camera.dozer_aruco_rotation_added_noise_end -
+                                                   config.camera.dozer_aruco_rotation_added_noise_start)
 
     while not camera_globals.exit_signal:
 
@@ -57,18 +69,29 @@ def main():
         if color_image_h is not None and depth_image_h is not None:
 
             dozer_pose, dumper_pose = calc_poses(camera_config=camera_config,
-                                    aruco_detector=aruco_detector,
-                                    color_image_h=color_image_h)
+                                                 aruco_detector=aruco_detector,
+                                                 color_image_h=color_image_h)
 
             if dozer_pose is None or dumper_pose is None:
                 print("Aruco Detection Missed")
-                #continue-----------------------------
+                continue
 
             dozer_position_publisher.send(config.topics.topic_dozer_position, dozer_pose.to_zmq_str())
             dumper_position_publisher.send(config.topics.topic_dumper_position, dumper_pose.to_zmq_str())
 
+
+            dozer_estimated_pose = dozer_pose.copy()
+            dozer_estimated_position = dozer_estimated_pose.position + dozer_aruco_position_noise_rvs.rvs(3)
+            dozer_estimated_rotation = dozer_estimated_pose.rotation + dozer_aruco_rotation_noise_rvs.rvs(3)
+            dozer_estimated_pose.update_position(dozer_estimated_position)
+            dozer_estimated_pose.update_rotation(dozer_estimated_rotation)
+
+            dozer_position_estimated_publisher.send(config.topics.topic_estimated_dozer_position,
+                                                    dozer_estimated_pose.to_zmq_str())  # TODO: change after debug to dozer_estimated_pose
+
             print(f'Dozer Pose {dozer_pose}')
-            print(f'Dumper Pose {dumper_pose}')
+            # yakov removed dumper for Kalman dabugging
+            # print(f'Dumper Pose {dumper_pose}')
 
             if cv2.waitKey(10) & 0xFF == ord('q'):
                 cv2.destroyAllWindows()
