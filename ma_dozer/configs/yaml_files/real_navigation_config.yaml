@@ -1,0 +1,74 @@
+#add_measurement_errors: False
+#add_nav_errors: False
+#add_IC_errors: False
+#add_random_IMU: False
+#add_random_meas_noise: False
+
+add_measurement_errors: False
+add_nav_errors: True
+add_IC_errors: True
+add_random_IMU: False
+add_random_meas_noise: False
+
+dt_nav: 0.01
+dt_kal: 0.15
+epsilon_dt_nav_to_dt_kal: 0.000001 # 1e-6
+L_cut: 2
+plt_navigation_convergance_flag: True
+
+ARW_val_one_sigma: !Array   # x y z
+  - 0.4
+  - 0.4
+  - 0.4
+
+GRW_val_one_sigma: !Array   # x y z
+  - 0.35
+  - 0.35
+  - 0.35
+
+bias_value_one_sigma: !Array   # x y z
+  - 0.03
+  - 0.02
+  - 0.02
+
+drift_value_one_sigma: !Array   # x y z
+  - 0.03
+  - 0.02
+  - 0.02
+
+#
+R_mat_params: !NDArray
+  # pos: [m,m,m]
+  # att: [rad] x,y,z
+  - 2 #row_num
+  - 3 #col_num
+#  - 0.3 # pos x [m]
+#  - 0.3 # pos y [m]
+#  - 0.3 # pos z [m]
+#  - 1   # phi   [deg]
+#  - 1   # theta [deg]
+#  - 1   # psi   [deg]
+  - 0.005 # pos x [m]
+  - 0.005 # pos y [m]
+  - 0.005 # pos z [m]
+  - 1.   # phi   [deg]
+  - 1.   # theta [deg]
+  - 1.   # psi   [deg]
+
+
+
+IC_params_value: !NDArray
+  # pos: [m,m,m] # x,y,z
+  # att: [rad] x,y,z
+  # vel:
+  - 3 #row_num
+  - 3 #col_num
+  - 1.0 # pos x [m]
+  - 1.0 # pos y [m]
+  - 1.0 # pos z [m]
+  - 4.0 # phi   [deg]
+  - 4.0 # theta [deg]
+  - 5.0 # psi   [deg]
+  - 0.3 # vel x [m/s]
+  - 0.3 # vel y [m/s]
+  - 0.4 # vel z [m/s]

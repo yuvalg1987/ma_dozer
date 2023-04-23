@@ -1,13 +1,16 @@
+from typing import Union
 import numpy as np
 import subprocess
+from pathlib import Path
+
 try:
     subprocess.check_output('nvidia-smi')
     import cupy as cp
-except Exception:
+    print('Nvidia GPU detected!')
+except Exception:  # this command not being found can raise quite a few different errors depending on the configuration
     import numpy as cp
+    print('No Nvidia GPU in system!')
 
-import os
-from pathlib import Path
 from ma_dozer.configs.controller_config import ControllerConfig
 from ma_dozer.configs.navigation_config import NavigationConfig
 from ma_dozer.configs.pydantic_config import BaseModel
@@ -118,12 +121,12 @@ class CameraNodeConfig(BaseModel):
     grid_height_c: int = None
     grid_width_c: int = None
 
-    intrinsics_d: cp.ndarray = None
-    rot_c2w_d: cp.ndarray = None
-    t_w2c_w_d: cp.ndarray = None
+    intrinsics_d: Union[cp.ndarray, np.ndarray] = None
+    rot_c2w_d: Union[cp.ndarray, np.ndarray] = None
+    t_w2c_w_d: Union[cp.ndarray, np.ndarray] = None
 
-    lower_bound_d: cp.ndarray = None
-    upper_bound_d: cp.ndarray = None
+    lower_bound_d: Union[cp.ndarray, np.ndarray] = None
+    upper_bound_d: Union[cp.ndarray, np.ndarray] = None
 
     @validator("color_image_address", always=True)
     def init_color_image_address(cls, v, values):
@@ -171,10 +174,10 @@ class DozerNode(BaseModel):
     path_port: int = 1236
     name: str = 'dozer'
 
-    action_file_path = './1_actions.txt'
+    action_file_path: str = './1_actions.txt'
 
-    imu_port = '/dev/ttyUSB0' # 'COM7 or COM8 for Windows
-    imu_baud_rate = 115200
+    imu_port: str = 'COM4'  # '/dev/ttyUSB0' # 'COM7 or COM8 for Windows
+    imu_baud_rate: int = 115200
     kalman_position_port: int = 1237
 
     controller: ControllerConfig = ControllerConfig()
@@ -190,7 +193,7 @@ class DumperNode(BaseModel):
 
     action_file_path = './1_actions.txt'
 
-    imu_port = '/dev/ttyUSB0' # 'COM7 or COM8 for Windows
+    imu_port = '/dev/ttyUSB0'  # 'COM7 or COM8 for Windows
     imu_baud_rate = 115200
     kalman_position_port: int = 1237
 
@@ -214,4 +217,4 @@ class NetworkConfig(BaseModel):
     dumper_node: DumperNode = DumperNode()
 
     dozer_aruco_idx: int = 3
-    use_estimated_aruco_pose = True
+    # use_estimated_aruco_pose = True

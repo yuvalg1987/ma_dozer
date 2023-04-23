@@ -1,5 +1,10 @@
+from pathlib import Path
+
 import numpy as np
+
+from ma_dozer.configs import yaml_folder_path
 from ma_dozer.configs.pydantic_config import BaseModel
+from ma_dozer.configs.yaml_loaders import *
 from pydantic import validator
 
 # def nav_config_factory(add_measurement_errors: bool = False,
@@ -71,7 +76,10 @@ from pydantic import validator
 #             true_ARW,
 #             true_GRW)
 
+
 class NavigationConfig(BaseModel):
+
+    navigation_config_path: Path = yaml_folder_path / 'real_navigation_config.yaml'
 
     add_measurement_errors: bool = False
     add_nav_errors: bool = False
@@ -81,21 +89,21 @@ class NavigationConfig(BaseModel):
     add_random_meas_noise: bool = False
     activate_kalman_filter: bool = True
 
-    dt_nav: float = 0.05
-    dt_kal: float = 1.
+    dt_nav: float = None
+    dt_kal: float = None
 
-    ARW_val_one_sigma: np.ndarray = np.zeros(3, )
-    GRW_val_one_sigma: np.ndarray = np.zeros(3, )
-    bias_value_one_sigma: np.ndarray = np.zeros(3, )  # x y z
-    drift_value_one_sigma: np.ndarray = np.zeros(3, )  # x y z
+    ARW_val_one_sigma: np.ndarray = None
+    GRW_val_one_sigma: np.ndarray = None
+    bias_value_one_sigma: np.ndarray = None  # x y z
+    drift_value_one_sigma: np.ndarray = None  # x y z
 
     ARW: np.ndarray = None
     GRW: np.ndarray = None
 
     Q_mat_params: np.ndarray = None
-    R_mat_params: np.ndarray = np.zeros((2, 3))
+    R_mat_params: np.ndarray = None  # np.zeros((2, 3))
 
-    IC_params_value: np.ndarray = np.zeros((3, 3))
+    IC_params_value: np.ndarray = None
     IC_params: np.ndarray = None
 
     rand_vec: np.ndarray = None
@@ -114,6 +122,40 @@ class NavigationConfig(BaseModel):
     L_cut: int = None
     plt_navigation_convergance_flag: bool = False
 
+    def __init__(self, **kwargs):
+
+        file_path = self.__fields__['navigation_config_path'].default
+
+        with open(file_path) as f:
+            data = yaml.safe_load(f)
+
+            super().__init__(**data)
+
+    # @validator("navigation_config_path", always=True)
+    # def init_navigation_config(cls, v, values):
+    #
+    #     with open(v) as f:
+    #         data = yaml.safe_load(f)
+    #
+    #         values['add_measurement_errors'] = data['add_measurement_errors']
+    #         values['add_nav_errors'] = data['add_nav_errors']
+    #         values['add_IC_errors'] = data['add_IC_errors']
+    #         values['add_random_IMU'] = data['add_random_IMU']
+    #         values['add_random_meas_noise'] = data['add_random_meas_noise']
+    #
+    #         values['dt_nav'] = data['dt_nav']
+    #         values['dt_kal'] = data['dt_kal']
+    #         values['epsilon_dt_nav_to_dt_kal'] = data['epsilon_dt_nav_to_dt_kal']
+    #         values['L_cut'] = data['L_cut']
+    #         values['plt_navigation_convergance_flag'] = data['plt_navigation_convergance_flag']
+    #         values['ARW_val_one_sigma'] = data['ARW_val_one_sigma']
+    #         values['GRW_val_one_sigma'] = data['GRW_val_one_sigma']
+    #         values['bias_value_one_sigma'] = data['bias_value_one_sigma']
+    #         values['drift_value_one_sigma'] = data['drift_value_one_sigma']
+    #         values['R_mat_params'] = data['R_mat_params']
+    #         values['IC_params_value'] = data['IC_params_value']
+    #
+    #         return values
 
     @validator("ARW", always=True)
     def init_ARW(cls, v, values):

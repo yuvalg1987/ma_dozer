@@ -66,7 +66,7 @@ class DumperControlManager(Thread):
             self.dumper_publisher_ack.send(self.config.topics.topic_dumper_ack_finished, curr_data)
             print(f'Sent init ACK_FINISHED {self.target_action}')
             self.action_update_flag = False
-            self.logger.log_camera_gt(self.curr_pose)
+            # self.logger.log_camera_gt(self.curr_pose)
             return
 
         self.target_action = target_action

@@ -7,7 +7,7 @@ class ControllerConfig(BaseModel):
     controller_debug_x_increment: float = 1
     controller_debug_angle_increment: float = 2
 
-    eps_delta_translation: float = 2
+    eps_delta_translation: float = 1
     eps_delta_yaw: float = 3
     eps_delta_pitch: float = 5
     eps_delta_roll: float = 5

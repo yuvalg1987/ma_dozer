@@ -99,7 +99,7 @@ class IMUSubscriber(threading.Thread):
                 if not imu_sync_detected:
                     continue
 
-                # If the sync byte us detected, read the rest of the message.
+                # If the sync byte is detected, read the rest of the message.
                 success = self.read_imu_data(s)
 
                 self.callback_func('imu_measurement', self._curr_measurement.to_zmq_str())
@@ -158,7 +158,8 @@ class IMUSubscriber(threading.Thread):
         # Compare the received checksum value against the calculated checksum.
         crc = self.calculate_imu_crc(data[:N - 2])
         if not crc == checksum:
-            print('IMU CRC error')
+            # TODO
+            # print('IMU CRC error')
             return False
 
         # If the checksum is valid, parse the data.
