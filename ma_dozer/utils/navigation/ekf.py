@@ -4,6 +4,7 @@ from typing import Tuple
 import navpy as nav
 
 from ma_dozer.configs.navigation_config import NavigationConfig
+from ma_dozer.utils.helpers.classes import Pose
 from ma_dozer.utils.navigation.strapdown import StrapDown
 
 
@@ -64,7 +65,7 @@ class EKF:
         self.init_x_plus_P_Plus(config=config)
         self.I_P_size = np.eye(self.state_size, self.state_size) # allocate for kalman update
 
-    def kalman_update(self, cam_measurement: np.ndarray = None):
+    def kalman_update(self, cam_measurement: Pose = None):
         self.init_A_mat()
         self.kalman_estimate(cam_measurement)
         self.reset_after_kalman()
@@ -101,6 +102,15 @@ class EKF:
         # --- Zeroing - --
         self.sd.sum_dcm = np.zeros((3,3))
         self.x_plus *= 0 # zero for next iteration.
+
+
+        # print('########################')
+        # print(f'position = {self.sd.measured_state_prev.pos}')
+        # print(f'velocity = {self.sd.measured_state_prev.vel}')
+        # print(f'attitude = {self.sd.measured_state_prev.att}')
+        # print(f'bias est = {self.sd.estimated_acc_bias}')
+        # print(f'drift est = {self.sd.estimated_gyro_drift}')
+        # print('########################')
 
     def init_H_mat(self):
         self.H[self.ind.dp[0]:self.ind.dp[1], self.ind.dp[0]:self.ind.dp[1]] = np.eye((3))
@@ -152,7 +162,8 @@ class EKF:
         if config.add_IC_errors:
             sf_ic_errors_x = 1
             d_vel = (3**2) * config.IC_params[0, :].max()/self.dt_kal
-            sf_ic_errors_P = np.array([3, 3, d_vel, 3, 3, ])
+            # sf_ic_errors_P = np.array([3, 3, d_vel, 3, 3, ])
+            sf_ic_errors_P = np.array([3, 3, 3, 3, 3, ])
         else:
             sf_ic_errors_x = 0
             sf_ic_errors_P = np.zeros(5,)
@@ -173,14 +184,14 @@ class EKF:
         self.P_plus[self.ind.dBc[0]:self.ind.dBc[1],self.ind.dBc[0]:self.ind.dBc[1]]     = sf_ic_errors_P[3] * np.diag((config.true_bias.copy())**2)
         self.P_plus[self.ind.dDc[0]:self.ind.dDc[1],self.ind.dDc[0]:self.ind.dDc[1]]     = sf_ic_errors_P[4] * np.diag((config.true_drift.copy())**2)
 
-    def kalman_estimate(self, cam_measurement: np.ndarray = None):
+    def kalman_estimate(self, cam_measurement: Pose = None):
 
         # Z
         Z = np.zeros(self.meaurement_size,)
-        Z[self.ind.dp[0]:self.ind.dp[1]]     = self.sd.measured_state.pos.copy() - cam_measurement[0:3].copy()
+        Z[self.ind.dp[0]:self.ind.dp[1]] = self.sd.measured_state.pos.copy() - cam_measurement.position.copy()
 
         nav_att = self.sd.measured_state.att.copy()
-        meas_att = cam_measurement[3:6].copy()
+        meas_att = cam_measurement.rotation.copy()
         curr_att_err_z_y_x = nav.dcm2angle(
             (nav.angle2dcm(meas_att[0], meas_att[1], meas_att[2])).T @
             (nav.angle2dcm(nav_att[0], nav_att[1], nav_att[2]))

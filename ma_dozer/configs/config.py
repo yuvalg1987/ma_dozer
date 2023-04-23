@@ -13,4 +13,4 @@ class Config(BaseModel):
 
     dozer_aruco_idx: int = 3 #TODO, move to camera config
     dumper_aruco_idx: int = 4 #TODO move to camera config
-    use_estimated_aruco_pose = False
+    use_estimated_aruco_pose: bool = False

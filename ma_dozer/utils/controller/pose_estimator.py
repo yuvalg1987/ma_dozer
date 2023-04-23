@@ -1,3 +1,4 @@
+import copy
 import time
 import numpy as np
 from typing import Optional
@@ -33,13 +34,19 @@ class PoseEstimator:
         self.ekf = EKF(self.config, self.strap_down)  # , init_timestep=initial_pose.timestamp
 
     def update_imu_measurement(self, curr_measurement: IMUData):
-        curr_measurement.delta_theta -= self.strap_down.estimated_gyro_drift * curr_measurement.delta_t  # x,y,z
-        curr_measurement.delta_velocity -= self.strap_down.estimated_acc_bias * curr_measurement.delta_t  # x,y,z
 
-        self.strap_down.SD(Qv=curr_measurement.delta_velocity,
-                           Qt=curr_measurement.delta_theta,
-                           time=curr_measurement.timestamp,
-                           dt=curr_measurement.delta_t)
+        curr_measurement_sd = IMUData(timestamp=copy.copy(curr_measurement.timestamp),
+                                      delta_t=copy.copy(curr_measurement.delta_t),
+                                      delta_velocity=copy.copy(curr_measurement.delta_velocity),
+                                      delta_theta=copy.copy(curr_measurement.delta_theta))
+
+        curr_measurement_sd.delta_theta -= self.strap_down.estimated_gyro_drift * curr_measurement.delta_t  # x,y,z
+        curr_measurement_sd.delta_velocity -= self.strap_down.estimated_acc_bias * curr_measurement.delta_t  # x,y,z
+
+        self.strap_down.SD(Qv=curr_measurement_sd.delta_velocity,
+                           Qt=curr_measurement_sd.delta_theta,
+                           time=curr_measurement_sd.timestamp,
+                           dt=curr_measurement_sd.delta_t)
 
         return self.strap_down.measured_state
 
