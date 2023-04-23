@@ -24,18 +24,18 @@ def main():
 
     MotorCommand = Enum('MotorCommand', 'FORWARD BACKWARD ROTATE_LEFT ROTATE_RIGHT')
 
-    max_distance_per_step = 0.05
+    max_distance_per_step = 5
     max_rot_per_step = 5
     eps = 1e-4
 
-    commands = [[MotorCommand.FORWARD, 0.5],
+    commands = [[MotorCommand.FORWARD, 50],
                 [MotorCommand.ROTATE_LEFT, 30],
-                [MotorCommand.FORWARD, 0.5],
+                [MotorCommand.FORWARD, 50],
                 [MotorCommand.ROTATE_LEFT, 30],
-                [MotorCommand.FORWARD, 0.5],
+                [MotorCommand.FORWARD, 50],
                 [MotorCommand.ROTATE_LEFT, 30],
-                [MotorCommand.FORWARD, 0.5],
-                [MotorCommand.BACKWARD, 1]]
+                [MotorCommand.FORWARD, 50],
+                [MotorCommand.BACKWARD, 100]]
 
     anchor_coord = np.array([[0, 0]])
     yaw = 0

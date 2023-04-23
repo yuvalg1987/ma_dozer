@@ -6,6 +6,8 @@ from ma_dozer.utils.helpers.classes import IMUData, Pose
 
 dozer_prototype_path = Path(__file__).parent
 
+from ma_dozer.utils.helpers.classes import IMUData, Pose
+
 
 def init_exp_folder():
 
@@ -14,12 +16,12 @@ def init_exp_folder():
     folder_location = os.path.abspath(f'../data/{datestamp}')
     svo_file_location = os.path.abspath(f'{folder_location}/exp_{timestamp}.svo')
     course_log_file = os.path.abspath(f'{folder_location}/exp_{timestamp}.txt')
+    controller_log_location = os.path.abspath(f'{folder_location}/exp_{timestamp}_controller.txt')
 
     if not (os.path.exists(folder_location)):
         os.makedirs(folder_location)
 
-    return folder_location, svo_file_location, course_log_file
-
+    return folder_location, svo_file_location, course_log_file, controller_log_location
 
 
 class Logger:
@@ -28,9 +30,9 @@ class Logger:
         super().__init__()
 
         self.folder_location, \
-        self.planner_log_location, \
-        self.controller_log_location, \
-        self.svo_file_location = init_exp_folder() # TODO fix
+        self.svo_file_location, \
+        self.course_log_file, \
+        self.controller_log_location = init_exp_folder() # TODO fix
 
         self.controller_log_file = open(self.controller_log_location, "wb")
 
@@ -44,7 +46,6 @@ class Logger:
         self.camera_file.write('time,x,y,z,yaw,pitch,roll\n')
 
     def log_controller_step(self, curr_pose, target_pose, curr_motor_command, curr_delta_eps):
-
         self.controller_log_file.write(f'curr_pose = {curr_pose}'.encode() + '\n'.encode())
         self.controller_log_file.write(f'target_pose = {target_pose}'.encode() + '\n'.encode())
         self.controller_log_file.write(f'curr_motor_command = {curr_motor_command}'.encode() + '\n'.encode())
