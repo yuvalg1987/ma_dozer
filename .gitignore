@@ -1,0 +1,5 @@
+.idea/*
+*.pyc
+/ma_dozer/scripts/dozer/experiments/*
+/ma_dozer/scripts/data/*
+/ma_dozer/data/*
