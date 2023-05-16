@@ -45,8 +45,8 @@ class LogIMU:
             # print('wrote to imu_csv_file')
 
     def print_data(self):
-      if len(self.imu_buffer) > 0:
-        print(f'{self.imu_buffer[-1]}')
+        if len(self.imu_buffer) > 0:
+            print(f'{self.imu_buffer[-1]}')
 
 
 if __name__ == '__main__':

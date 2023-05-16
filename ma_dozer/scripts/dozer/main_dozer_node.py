@@ -1,9 +1,6 @@
 import signal
-import subprocess
 import sys
 import threading
-import time
-import platform
 from PyQt5.QtWidgets import QApplication
 
 from ma_dozer.configs.config import Config
@@ -19,23 +16,9 @@ def main():
 
     exit_event = threading.Event()
 
-    # print(platform.system())
-    # if platform.system() == 'Windows':
-    #     subprocess.run(["C:\\Program Files\\Git\\bin\\bash.exe", '-l', 'init_time.sh'],
-    #                    cwd='C:\\Users\\Dozer\\Documents\\Python Scripts\\ma_dozer\\ma_dozer\\scripts')
-
-    # curr_time = time.time()
-    # command = f'ssh Dozer@{config.camera.ip} date --set {curr_time}'
-    # command = f''
-    #
-    # res = subprocess.run(ssh_command)
-
-    # navigation_file_location = dozer_prototype_path / 'configs' / 'real_navigation_config.yaml'
-    # navigation_config = NavigationConfig.from_file(navigation_file_location)
-
     control_manager = DozerControlManager(config=config, exit_event=exit_event)
 
-    def signal_handler(sig,frame):
+    def signal_handler(sig, frame):
         print('you have stopped')
         exit_event.set()
         sys.exit(0)
@@ -58,8 +41,6 @@ def main():
                                            topics=[config.topics.topic_algo_dozer_action],
                                            callback_func=control_manager.update_action)
 
-    # control_manager.enable_meas_log = True
-    # control_manager.pose_init_stage = False
     imu_measurement_subscriber = IMUSubscriber(imu_config=config.dozer,
                                                callback_func=control_manager.update_pose_imu)
 
@@ -94,12 +75,6 @@ def main():
     print('action finished')
     
     sys.exit()
-
-    # except KeyboardInterrupt:
-    #     control_manager.logger.imu_file.close()
-    #     control_manager.logger.camera_file.close()
-    #     control_manager.logger.camera_gt_file.close()
-    #     sys.exit()
 
 
 if __name__ == '__main__':
