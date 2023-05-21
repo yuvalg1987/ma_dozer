@@ -55,7 +55,7 @@ class PIDController:
 
     def is_inside_bound(self):
         if self.left_bound <= self.curr_pose.position.x <= self.right_bound and \
-           self.down_bound <= self.curr_pose.position.y <= self.up_bound:
+                self.down_bound <= self.curr_pose.position.y <= self.up_bound:
             return True
         else:
             return False
@@ -82,8 +82,8 @@ class PIDController:
                                                               motor_command=self.curr_motor_command)
 
             curr_delta_eps_pqr = self.prev_delta_pqr - delta_yaw
-            if curr_delta_eps_pqr < -self.controller_config.eps_delta_yaw:
-                break
+            # if curr_delta_eps_pqr < -self.controller_config.eps_delta_yaw:
+            #     break
 
             if not self.is_inside_bound():
                 break
@@ -91,7 +91,8 @@ class PIDController:
             self.prev_delta_pqr = delta_yaw
             self.roboclaw_controller.rotate_left()
 
-        # self.roboclaw_controller.stop()
+        self.roboclaw_controller.stop()
+        a = 1
         # print('exit left rotation')
 
     def rotate_right(self):
@@ -111,8 +112,8 @@ class PIDController:
                                                               motor_command=self.curr_motor_command)
 
             curr_delta_eps_pqr = self.prev_delta_pqr - delta_yaw
-            if curr_delta_eps_pqr < -self.controller_config.eps_delta_yaw:
-                break
+            # if curr_delta_eps_pqr < -self.controller_config.eps_delta_yaw:
+            #     break
 
             if not self.is_inside_bound():
                 break
@@ -120,7 +121,8 @@ class PIDController:
             self.prev_delta_pqr = delta_yaw
             self.roboclaw_controller.rotate_right()
 
-        # self.roboclaw_controller.stop()
+        self.roboclaw_controller.stop()
+        a = 1
         # print('exit right rotation')
 
     def forward(self):
@@ -132,28 +134,33 @@ class PIDController:
                                                           motor_command=self.curr_motor_command)
 
         self.prev_delta_xyz = delta_xyz
-        while not res and not self.is_stop:
 
+        results = []
+
+        while not res and not self.is_stop:
             res, delta_xyz, delta_yaw = epsilon_close_control(self.controller_config,
                                                               curr_pose=self.curr_pose,
                                                               target_pose=self.target_pose,
                                                               motor_command=self.curr_motor_command)
 
-            curr_delta_eps_xyz = self.prev_delta_xyz - delta_xyz
+            # curr_delta_eps_xyz = self.prev_delta_xyz - delta_xyz
+            results.append((self.curr_pose, self.target_pose, self.curr_motor_command, delta_xyz))
 
-            self.logger.log_controller_step(self.curr_pose, self.target_pose, self.curr_motor_command, curr_delta_eps_xyz)
-            if curr_delta_eps_xyz < -self.controller_config.eps_delta_translation:
-                break
+            # self.logger.log_controller_step(self.curr_pose, self.target_pose, self.curr_motor_command, delta_xyz)
+            # if curr_delta_eps_xyz < -self.controller_config.eps_delta_translation:
+            #     break
 
-            if not self.is_inside_bound():
-                break
+            # if not self.is_inside_bound():
+            #     break
 
             time.sleep(0.1)
             self.prev_delta_xyz = delta_xyz
             self.roboclaw_controller.forward()
 
+        self.roboclaw_controller.stop()
         self.logger.log_controller_finished(self.curr_pose, self.target_pose, self.curr_motor_command)
-        # self.roboclaw_controller.stop()
+        # print(results)
+        a = 1
         # print('exit forward translation')
 
     def backward(self):
@@ -172,11 +179,11 @@ class PIDController:
                                                               target_pose=self.target_pose,
                                                               motor_command=self.curr_motor_command)
 
-            curr_delta_eps_xyz = self.prev_delta_xyz - delta_xyz
-            self.logger.log_controller_step(self.curr_pose, self.target_pose, self.curr_motor_command, curr_delta_eps_xyz)
+            # curr_delta_eps_xyz = self.prev_delta_xyz - delta_xyz
+            # self.logger.log_controller_step(self.curr_pose, self.target_pose, self.curr_motor_command, delta_xyz)
 
-            if curr_delta_eps_xyz < -self.controller_config.eps_delta_translation:
-                break
+            # if curr_delta_eps_xyz < -self.controller_config.eps_delta_translation:
+            #     break
 
             if not self.is_inside_bound():
                 break
@@ -185,8 +192,9 @@ class PIDController:
             self.prev_delta_xyz = delta_xyz
             self.roboclaw_controller.backward()
 
+        self.roboclaw_controller.stop()
         self.logger.log_controller_finished(self.curr_pose, self.target_pose, self.curr_motor_command)
-        # self.roboclaw_controller.stop()
+        a = 1
         # print('exit backward translation')
 
     def move_to_pose(self):

@@ -56,8 +56,8 @@ class CameraNodeConfig(BaseModel):
     dozer_position_port: int = 1234
     dozer_estimated_position_port: int = 1235
 
-    dumper_position_port: int = 1236
-    dumper_estimated_position_port: int = 1237
+    dumper_position_port: int = 12400
+    dumper_estimated_position_port: int = 1241
 
     color_image_address: str = None
     depth_image_address: str = None

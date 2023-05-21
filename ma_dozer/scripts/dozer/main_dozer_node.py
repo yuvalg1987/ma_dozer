@@ -25,7 +25,6 @@ def main():
 
     signal.signal(signal.SIGINT, signal_handler)
 
-    # try:
     aruco_est_position_subscriber = ThreadedSubscriber(ip=config.camera.ip,
                                                        port=config.camera.dozer_estimated_position_port,
                                                        topics=[config.topics.topic_estimated_dozer_position],

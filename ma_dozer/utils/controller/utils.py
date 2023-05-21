@@ -66,6 +66,8 @@ def epsilon_close_plan(controller_config: ControllerConfig(),
     else:
         res = (delta_xyz < controller_config.eps_delta_translation * controller_config.eps_delta_planner_xyz) and \
               (delta_yaw < controller_config.eps_delta_yaw * controller_config.eps_delta_planner_pqr)
+        if res:
+            print(f'delta_translation = {delta_xyz} delta_yaw = {delta_yaw}')
 
     return res
 
