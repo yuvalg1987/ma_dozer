@@ -30,6 +30,7 @@ class Env(Thread):
     def step(self, action: Optional[Action]):
 
         self.algo_messaging_thread.send_action(action, self.name)
+        print(f'{self.name} - Action was sent: {action}')
 
         while not self.algo_messaging_thread.check_ack_received(action, self.name):
             time.sleep(0.005)
@@ -55,6 +56,7 @@ class Env(Thread):
         # get actions from files
         self.action = Action.from_zmq_str(self.action_file.readline())
         self.action = self.action + self.init_pose
+        print(f'INIT Action: {self.action}, {self.action.is_init_action}')
         while not is_done:
             print("sending next action")
 
@@ -66,6 +68,6 @@ class Env(Thread):
         if next_action == '':
             return True
         else:
-            self.action = self.action + self.init_pose
             self.action = Action.from_zmq_str(next_action)
+            self.action = self.action + self.init_pose
         return False

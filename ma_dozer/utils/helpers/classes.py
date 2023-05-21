@@ -566,6 +566,7 @@ class IMUData:
                f'dv_x = {self.delta_velocity.dv_x:.3f}, dv_y = {self.delta_velocity.dv_y:.3f}, dv_z = {self.delta_velocity.dv_z:.3f}, ' \
                f'd_yaw = {self.delta_theta.delta_yaw:.3f}, d_pitch = {self.delta_theta.delta_pitch:.3f}, Roll = {self.delta_theta.delta_roll:.3f}, ' \
 
+
     @classmethod
     def from_array(cls, timestamp: int,
                         delta_t: float,
@@ -609,14 +610,14 @@ class IMUData:
                f'{self.delta_theta.delta_yaw}#{self.delta_theta.delta_pitch}#{self.delta_theta.delta_roll}'
 
     def to_log_str(self):
-        return ','.join((self.timestamp,
-                        self.delta_t,
-                        self.delta_velocity.dv_x,
-                        self.delta_velocity.dv_y,
-                        self.delta_velocity.dv_z,
-                        self.delta_theta.delta_yaw,
-                        self.delta_theta.delta_pitch,
-                        self.delta_theta.delta_roll))
+        return ','.join([str(x) for x in [self.timestamp,
+                                          self.delta_t,
+                                          self.delta_velocity.dv_x,
+                                          self.delta_velocity.dv_y,
+                                          self.delta_velocity.dv_z,
+                                          self.delta_theta.delta_yaw,
+                                          self.delta_theta.delta_pitch,
+                                          self.delta_theta.delta_roll]])
 
 
 @dataclass

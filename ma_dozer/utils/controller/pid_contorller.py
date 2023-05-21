@@ -35,7 +35,7 @@ class PIDController:
 
         self.path_debug: List = []
 
-        camera_calibration_dir = Path(__file__).parent / '..' / '..' / '..' / 'camera_calibration'
+        camera_calibration_dir = Path(__file__).parent.parent.parent / 'camera_calibration'
         self.lower_bound_w_h: np.ndarray = np.load((camera_calibration_dir / 'lower_bound_w.npy').as_posix())
         self.upper_bound_w_h: np.ndarray = np.load((camera_calibration_dir / 'upper_bound_w.npy').as_posix())
 
