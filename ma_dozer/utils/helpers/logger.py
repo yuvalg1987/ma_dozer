@@ -40,7 +40,6 @@ class Logger:
         self.imu_file = open('./imu_meas.csv', 'w')
         self.camera_gt_file = open('./camera_gt_meas.csv', 'w')
         self.camera_file = open('./camera_meas.csv', 'w')
-        self.imu_message_counter = 0
 
     def log_controller_step(self, curr_pose, target_pose, curr_motor_command, curr_delta_eps):
         self.controller_log_file.write(f'curr_pose = {curr_pose}'.encode() + '\n'.encode())
@@ -61,7 +60,6 @@ class Logger:
         # self.imu_file.flush()
 
     def log_imu_readings_buffer(self, imu_buffer: np.ndarray, buff_len: int):
-        self.imu_message_counter += 100
         for k in range(0, buff_len):
             # self.imu_file.write(imu_buffer[k].to_log_str() + '\n')
             self.imu_file.write(self.nparray_to_str(imu_buffer[k]) + '\n')

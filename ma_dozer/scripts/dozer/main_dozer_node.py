@@ -35,7 +35,7 @@ def main():
 
     control_manager = DozerControlManager(config=config, exit_event=exit_event)
 
-    def signal_handler(sig,frame):
+    def signal_handler(sig, frame):
         print('you have stopped')
         exit_event.set()
         sys.exit(0)

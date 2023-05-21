@@ -20,5 +20,4 @@ class ControllerConfig(BaseModel):
 
     print_control_mod: float = 5
     eps_bound_distance: float = 0
-<<<<<<< HEAD
     use_ekf: bool = True
