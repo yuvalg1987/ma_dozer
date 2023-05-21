@@ -24,6 +24,12 @@ class Position(np.ndarray):
     def __new__(cls, x, y, z):
         return np.asarray([x, y, z]).view(cls)
 
+    def __str__(self):
+        return ','.join([str(self[n].item()) for n in range(3)])
+
+    # def __format__(self, format_spec):
+    #     return np.array([round(self[n].item(), format_spec) for n in range(3)])
+
     @property
     def x(self):
         return self[0].item()
@@ -519,6 +525,7 @@ class Action:
         return cls(x=float(x_str), y=float(y_str), z=float(z_str),
                    yaw=float(yaw_str), pitch=float(pitch_str), roll=float(roll_str),
                    forward_movement=forward_movement, vehicle_id=int(id_str),
+                   motion_type=MotorCommand[curr_action_type],
                    is_init_action=str2bool(is_init_action_str.strip()))
 
     @classmethod
