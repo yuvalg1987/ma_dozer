@@ -50,11 +50,25 @@ class DozerControlManager(Thread):
         self.time_sync_pc_imu = 0
         self.time_sync_pc_camera = 0
 
+        L_imu_msg = 8  # time, dt, dx,dy,dz,dyaw,dp,dr
+        self.IMU_BUFFER_CNT_MAX = 7000
+        self.imu_buffer = np.zeros((self.IMU_BUFFER_CNT_MAX, L_imu_msg))
+        self.imu_buffer_cnt = 0
+
+        L_cam_msg = 7  # time, x,y,z,y,p,r
+        self.CAM_BUFFER_CNT_MAX = 12
+
+        self.cam_gt_buffer = np.zeros((self.CAM_BUFFER_CNT_MAX, L_cam_msg))
+        self.cam_gt_buffer_cnt = 0
+
+        self.cam_est_buffer = np.zeros((self.CAM_BUFFER_CNT_MAX, L_cam_msg))
+        self.cam_est_buffer_cnt = 0
+
         self.init_time = 0
         self.init_step_flag = True
 
         self.exit_event = exit_event
-
+        
         self.logger.write_head_to_file()
 
     def update_action(self, curr_topic: str, curr_data: str):
@@ -71,7 +85,7 @@ class DozerControlManager(Thread):
             # Aviad
             self.init_time = time.time_ns()
             print(self.init_time)
-            self.logger.write_init_time(init_time=self.init_time)
+            self.logger.init_time = self.init_time
             self.curr_pose = target_action.to_pose()
             self.enable_meas_log = True
             self.init_time_flag = True
@@ -82,7 +96,6 @@ class DozerControlManager(Thread):
             self.dozer_publisher_ack.send(self.config.topics.topic_dozer_ack_finished, curr_data)
             print(f'Sent init ACK_FINISHED {self.target_action}')
             self.action_update_flag = False
-            # self.logger.log_camera_gt(self.curr_pose)
             return
 
         # if self.init_time == 0:
@@ -102,7 +115,6 @@ class DozerControlManager(Thread):
                               CompareType.ALL):
 
             self.is_finished = True
-            # curr_data = self.target_action.to_zmq_str()
             self.dozer_publisher_ack.send(self.config.topics.topic_dozer_ack_finished, curr_data)
             print(f'Sent ACK_FINISHED {self.target_action}')
             self.action_update_flag = False
@@ -117,39 +129,8 @@ class DozerControlManager(Thread):
             curr_imu_measurement = IMUData.from_zmq_str(curr_data)
             strap_down_measurement = self.pose_estimator.update_imu_measurement(curr_imu_measurement)
 
-            # if self.init_time_flag:
-            #     self.time_sync_pc_imu = curr_imu_measurement.timestamp - self.init_pose.timestamp
-            #     self.init_time_flag = False
-
             if True:  # self.enable_meas_log:
-                curr_imu_measurement.timestamp -= self.time_sync_pc_imu
-
-                imu_data_np = np.asarray(
-                    [
-                        curr_imu_measurement.timestamp,
-                        curr_imu_measurement.delta_t,
-                        curr_imu_measurement.delta_velocity.dv_x,
-                        curr_imu_measurement.delta_velocity.dv_y,
-                        curr_imu_measurement.delta_velocity.dv_z,
-                        curr_imu_measurement.delta_theta.delta_yaw,
-                        curr_imu_measurement.delta_theta.delta_pitch,
-                        curr_imu_measurement.delta_theta.delta_roll
-                    ])
-
-                self.imu_buffer[self.imu_buffer_cnt, :] = imu_data_np
-                self.imu_buffer_cnt += 1
-                if self.imu_buffer_cnt == self.IMU_BUFFER_CNT_MAX:
-                    print("saving IMU Data")
-                    print(self.imu_buffer_cnt)
-                    self.logger.log_imu_readings_buffer(imu_buffer=self.imu_buffer, buff_len=self.IMU_BUFFER_CNT_MAX)
-                    self.imu_buffer_cnt = 0
-                    self.imu_buffer *= 0
-                    time.sleep(2)
-                    sys.exit()
-
-                # self.logger.log_imu_readings(curr_imu_measurement)
-                # yakov
-                # print('wrote to imu_csv_file')
+                self.logger.add_to_imu_buffer(curr_imu_measurement)
 
             rotation_rad = strap_down_measurement.att
             rotation_deg = rotation_rad / np.pi * 180
@@ -202,54 +183,11 @@ class DozerControlManager(Thread):
 
         if curr_topic == self.config.topics.topic_dozer_position:  # and self.enable_meas_log:
             curr_aruco_pose.update_timestamp(curr_aruco_pose.timestamp - self.time_sync_pc_camera)
+            self.logger.add_to_cam_gt_buffer(curr_aruco_pose)
 
-            cam_data_np = np.asarray(
-                [
-                    curr_aruco_pose.timestamp,
-                    curr_aruco_pose.position.x,
-                    curr_aruco_pose.position.y,
-                    curr_aruco_pose.position.z,
-                    curr_aruco_pose.rotation.yaw,
-                    curr_aruco_pose.rotation.pitch,
-                    curr_aruco_pose.rotation.roll
-                ])
-
-            self.cam_gt_buffer[self.cam_gt_buffer_cnt, :] = cam_data_np
-            self.cam_gt_buffer_cnt += 1
-            if self.cam_gt_buffer_cnt == self.CAM_BUFFER_CNT_MAX:
-                print('wrote to camera_gt_file')
-                self.logger.log_camera_gt_buffer(cam_buffer=self.cam_gt_buffer, buff_len=self.CAM_BUFFER_CNT_MAX)
-                self.cam_gt_buffer_cnt = 0
-                self.cam_gt_buffer *= 0
-
-            # self.logger.log_camera_gt(curr_aruco_pose)
-            # yakov
-            # print('wrote to camera_gt_file')
         elif curr_topic == self.config.topics.topic_estimated_dozer_position:  # and self.enable_meas_log:
             curr_aruco_pose.update_timestamp(curr_aruco_pose.timestamp -self.time_sync_pc_camera)
-
-            cam_data_np = np.asarray(
-                [
-                    curr_aruco_pose.timestamp,
-                    curr_aruco_pose.position.x,
-                    curr_aruco_pose.position.y,
-                    curr_aruco_pose.position.z,
-                    curr_aruco_pose.rotation.yaw,
-                    curr_aruco_pose.rotation.pitch,
-                    curr_aruco_pose.rotation.roll
-                ])
-
-            self.cam_est_buffer[self.cam_est_buffer_cnt, :] = cam_data_np
-            self.cam_est_buffer_cnt += 1
-            if self.cam_est_buffer_cnt == self.CAM_BUFFER_CNT_MAX:
-                print('wrote to camera_noisy_file')
-                self.logger.log_camera_est_buffer(cam_buffer=self.cam_est_buffer, buff_len=self.CAM_BUFFER_CNT_MAX)
-                self.cam_est_buffer_cnt = 0
-                self.cam_est_buffer *= 0
-
-            # self.logger.log_camera_est(curr_aruco_pose)
-            # yakov
-            # print('wrote to camera_noisy_file')
+            self.logger.add_to_cam_est_buffer(curr_aruco_pose)
 
         if self.config.use_estimated_aruco_pose and curr_topic == self.config.topics.topic_dozer_position:
             return
@@ -331,9 +269,9 @@ class DozerControlManager(Thread):
                     self.dozer_publisher_ack.send(self.config.topics.topic_dozer_ack_finished, curr_data)
                     print(f'Sent ACK_FINISHED {self.target_action}')
                     self.action_update_flag = False
-
+            
             time.sleep(0.01)
-
+            
     def stop(self):
         print('Exit control manger')
         self.is_stop = True

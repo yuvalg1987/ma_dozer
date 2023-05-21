@@ -363,6 +363,19 @@ class Pose:
         return ','.join([str(x) for x in [self.timestamp, self.position.x, self.position.y, self.position.z,
                          self.rotation.yaw, self.rotation.pitch, self.rotation.roll]])
 
+    def to_numpy(self):
+        cam_data_np = np.asarray(
+            [
+                self.timestamp,
+                self.position.x,
+                self.position.y,
+                self.position.z,
+                self.rotation.yaw,
+                self.rotation.pitch,
+                self.rotation.roll
+            ])
+        return cam_data_np
+
 
 class Action:
 
@@ -618,6 +631,20 @@ class IMUData:
                                           self.delta_theta.delta_yaw,
                                           self.delta_theta.delta_pitch,
                                           self.delta_theta.delta_roll]])
+
+    def to_numpy(self):
+        imu_data_np = np.asarray(
+            [
+                self.timestamp,
+                self.delta_t,
+                self.delta_velocity.dv_x,
+                self.delta_velocity.dv_y,
+                self.delta_velocity.dv_z,
+                self.delta_theta.delta_yaw,
+                self.delta_theta.delta_pitch,
+                self.delta_theta.delta_roll
+            ])
+        return imu_data_np
 
 
 @dataclass
