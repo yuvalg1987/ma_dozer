@@ -14,26 +14,40 @@ class LogIMU:
     def __init__(self):
         self.imu_buffer = []
         self.imu_buffer_cnt = 0
-        self.IMU_BUFFER_CNT_MAX = 500
+        self.IMU_BUFFER_CNT_MAX = 100
 
         self.logger = Logger()
 
     def imu_read(self, curr_topic: str, curr_data: str):
         curr_imu_measurement = IMUData.from_zmq_str(curr_data)
+        
+        imu_data_np = np.asarray(
+                    [
+                        curr_imu_measurement.timestamp,
+                        curr_imu_measurement.delta_t,
+                        curr_imu_measurement.delta_velocity.dv_x,
+                        curr_imu_measurement.delta_velocity.dv_y,
+                        curr_imu_measurement.delta_velocity.dv_z,
+                        curr_imu_measurement.delta_theta.delta_yaw,
+                        curr_imu_measurement.delta_theta.delta_pitch,
+                        curr_imu_measurement.delta_theta.delta_roll
+                    ])
 
-        self.imu_buffer.append(curr_imu_measurement)
+        self.imu_buffer.append(imu_data_np)
         self.imu_buffer_cnt += 1
         if self.imu_buffer_cnt == self.IMU_BUFFER_CNT_MAX:
             print(f'{time.time_ns()} write to file...')
-            self.logger.log_imu_readings_buffer(imu_buffer=self.imu_buffer, buff_len=self.IMU_BUFFER_CNT_MAX)
+            self.logger.log_imu_readings_buffer(imu_buffer=np.array(self.imu_buffer), buff_len=self.IMU_BUFFER_CNT_MAX)
             self.imu_buffer_cnt = 0
+            self.imu_buffer = []
 
             # self.logger.log_imu_readings(curr_imu_measurement)
             # yakov
             # print('wrote to imu_csv_file')
 
     def print_data(self):
-        print(f'{self.imu_buffer[-1]}')
+        if len(self.imu_buffer) > 0:
+            print(f'{self.imu_buffer[-1]}')
 
 
 if __name__ == '__main__':
@@ -59,13 +73,17 @@ if __name__ == '__main__':
     thread_imu.start()
 
     count_sec = 0
-    while count_sec < 10:
+
+    while count_sec < 30:
         time.sleep(1.)
         log_imu.print_data()
         count_sec += 1
 
     time.sleep(1.)
     thread_imu.end_thread()
+
+    thread_imu.join()
+
     log_imu.logger.close_logger_files()
 
     print('Program closed')

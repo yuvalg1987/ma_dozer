@@ -1,8 +1,6 @@
 import signal
-import subprocess
 import sys
-import time
-import platform
+import threading
 from PyQt5.QtWidgets import QApplication
 
 from ma_dozer.configs.config import Config
@@ -16,21 +14,16 @@ def main():
 
     config: Config = Config()
 
-    # print(platform.system())
-    # if platform.system() == 'Windows':
-    #     subprocess.run(["C:\\Program Files\\Git\\bin\\bash.exe", '-l', 'init_time.sh'],
-    #                    cwd='C:\\Users\\Dozer\\Documents\\Python Scripts\\ma_dozer\\ma_dozer\\scripts')
+    exit_event = threading.Event()
 
-    # curr_time = time.time()
-    # command = f'ssh Dozer@{config.camera.ip} date --set {curr_time}'
-    # command = f''
-    #
-    # res = subprocess.run(ssh_command)
+    control_manager = DozerControlManager(config=config, exit_event=exit_event)
 
-    # navigation_file_location = dozer_prototype_path / 'configs' / 'real_navigation_config.yaml'
-    # navigation_config = NavigationConfig.from_file(navigation_file_location)
+    def signal_handler(sig, frame):
+        print('you have stopped')
+        exit_event.set()
+        sys.exit(0)
 
-    control_manager = DozerControlManager(config=config)
+    signal.signal(signal.SIGINT, signal_handler)
 
     def signal_handler(sig):
         print('you have stopped')
@@ -72,13 +65,25 @@ def main():
 
     win.show()
     app.exec()
-    sys.exit()
 
-    # except KeyboardInterrupt:
-    #     control_manager.logger.imu_file.close()
-    #     control_manager.logger.camera_file.close()
-    #     control_manager.logger.camera_gt_file.close()
-    #     sys.exit()
+    aruco_est_position_subscriber.stop()
+    aruco_gt_position_subscriber.stop()
+    imu_measurement_subscriber.end_thread()
+    action_subscriber.stop()
+    control_manager.stop()
+
+    control_manager.join()
+    print('control manager finished')
+    aruco_est_position_subscriber.join()
+    print('aruco est finished')
+    aruco_gt_position_subscriber.join()
+    print('aruco gt finished')
+    imu_measurement_subscriber.join()
+    print('imu finished')
+    action_subscriber.join()
+    print('action finished')
+
+    sys.exit()
 
 
 if __name__ == '__main__':
