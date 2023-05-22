@@ -25,13 +25,6 @@ def main():
 
     signal.signal(signal.SIGINT, signal_handler)
 
-    def signal_handler(sig):
-        print('you have stopped')
-        control_manager.logger.close_logger_files()
-        sys.exit(0)
-
-    signal.signal(signal.SIGINT, signal_handler)
-
     # try:
     aruco_est_position_subscriber = ThreadedSubscriber(ip=config.camera.ip,
                                                        port=config.camera.dozer_estimated_position_port,
@@ -48,8 +41,6 @@ def main():
                                            topics=[config.topics.topic_algo_dozer_action],
                                            callback_func=control_manager.update_action)
 
-    # control_manager.enable_meas_log = True
-    # control_manager.pose_init_stage = False
     imu_measurement_subscriber = IMUSubscriber(imu_config=config.dozer,
                                                callback_func=control_manager.update_pose_imu)
 
@@ -65,13 +56,13 @@ def main():
 
     win.show()
     app.exec()
-
+    
     aruco_est_position_subscriber.stop()
     aruco_gt_position_subscriber.stop()
     imu_measurement_subscriber.end_thread()
     action_subscriber.stop()
     control_manager.stop()
-
+    
     control_manager.join()
     print('control manager finished')
     aruco_est_position_subscriber.join()
@@ -82,7 +73,7 @@ def main():
     print('imu finished')
     action_subscriber.join()
     print('action finished')
-
+    
     sys.exit()
 
 

@@ -7,8 +7,8 @@ if __name__ == "__main__":
     address = 0x80
     roboclaw = Roboclaw("/dev/ttyS0", 38400)
     roboclaw.Open()
+
     
-    """
     roboclaw.ForwardM1(address, 100);  # Cmd 0
     roboclaw.ForwardM2(address, 100);  # Cmd 5
     time.sleep(2)
@@ -16,7 +16,7 @@ if __name__ == "__main__":
     # stop motors
     roboclaw.ForwardM1(address, 0);
     roboclaw.ForwardM2(address, 0);
-    time.sleep(10)
+    time.sleep(2)
 
     roboclaw.BackwardM1(address, 100);  # Cmd 0
     roboclaw.BackwardM2(address, 100);  # Cmd 5
@@ -25,30 +25,28 @@ if __name__ == "__main__":
     # stop motors
     roboclaw.ForwardM1(address, 0);
     roboclaw.ForwardM2(address, 0);
-    time.sleep(10)
-    """
+    time.sleep(2)
     
-    """
-    # turn righth
+    
+    # turn right
     roboclaw.ForwardM1(address, 100);  # Cmd 0
     roboclaw.BackwardM2(address, 100);  # Cmd 5
-    time.sleep(5)
+    time.sleep(2)
 
     # stop motors
     roboclaw.ForwardM1(address, 0);
     roboclaw.ForwardM2(address, 0);
-    time.sleep(10)
+    time.sleep(2)
     
     # turn left
     roboclaw.BackwardM1(address, 100);  # Cmd 0
     roboclaw.ForwardM2(address, 100);  # Cmd 5
-    time.sleep(5)
+    time.sleep(2)
 
     # stop motors
     roboclaw.ForwardM1(address, 0);
     roboclaw.ForwardM2(address, 0);
-    time.sleep(10)
-    """
+    time.sleep(2)
     
     """
     # square
@@ -140,6 +138,7 @@ if __name__ == "__main__":
     time.sleep(2)
     """
     
+    """
     roboclaw.ForwardM1(address, 100);  # Cmd 0
     roboclaw.ForwardM2(address, 100);  # Cmd 5
     time.sleep(3)
@@ -214,3 +213,4 @@ if __name__ == "__main__":
     roboclaw.ForwardM1(address, 0);
     roboclaw.ForwardM2(address, 0);
     time.sleep(2)
+    """
