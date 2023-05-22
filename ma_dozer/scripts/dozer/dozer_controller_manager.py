@@ -39,8 +39,8 @@ class DozerControlManager(Thread):
         self.logger: Logger = Logger(self.config.dozer.name)
         self.enable_meas_log: bool = False
 
-        # self.controller: PIDController = PIDController(controller_config=self.config.dozer.controller,
-        #                                                logger=self.logger)
+        self.controller: PIDController = PIDController(controller_config=self.config.dozer.controller,
+                                                       logger=self.logger)
 
         self.pose_init_stage = True
         self.pose_estimator = PoseEstimator(navigation_config=config.dozer.navigation)
@@ -64,7 +64,6 @@ class DozerControlManager(Thread):
 
         target_action = Action.from_zmq_str(curr_data)
         self.target_action = target_action
-
         # yakov
         print(f"target_action.is_init_action = {target_action.is_init_action}")
 
@@ -74,13 +73,11 @@ class DozerControlManager(Thread):
             # Aviad
             self.init_time = time.time_ns()
             print(self.init_time)
-
             self.logger.init_time = self.init_time
             self.curr_pose = target_action.to_pose()
             self.enable_meas_log = True
             self.init_time_flag = True
             self.init_step_flag = False
-
             self.is_finished = True
             self.dozer_publisher_ack.send(self.config.topics.topic_dozer_ack_received, curr_data)
             print(f'Sent init ACK_RECEIVED {self.target_action}')
@@ -135,7 +132,7 @@ class DozerControlManager(Thread):
                                                timestamp=strap_down_measurement.time)
 
             self.curr_pose = curr_dozer_pose.copy()
-            # self.controller.update_pose(curr_dozer_pose)
+            self.controller.update_pose(curr_dozer_pose)
 
             self.imu_message_counter += 1
 
@@ -189,7 +186,7 @@ class DozerControlManager(Thread):
 
                 self.curr_pose = curr_aruco_pose.copy()
                 self.pose_estimator.init(curr_aruco_pose)
-                # self.controller.update_pose(curr_aruco_pose)
+                self.controller.update_pose(curr_aruco_pose)
                 self.pose_init_stage = False
 
             else:
@@ -212,13 +209,12 @@ class DozerControlManager(Thread):
 
                 # print(f'Aruco Measurement {curr_aruco_pose}')
                 self.controller.update_pose(curr_aruco_pose)
-
                 # print(f'sd position: {self.curr_pose.position}')
                 # print(f'sd rotation: {self.curr_pose.rotation}')
 
         else:
             self.curr_pose = curr_aruco_pose.copy()
-            # self.controller.update_pose(curr_aruco_pose)
+            self.controller.update_pose(curr_aruco_pose)
             self.pose_init_stage = False
             # print(f'Aruco Measurement {curr_aruco_pose}')
 
