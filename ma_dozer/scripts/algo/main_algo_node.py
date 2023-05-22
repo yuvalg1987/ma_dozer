@@ -27,7 +27,7 @@ def main():
                          name=config.dumper.name,
                          init_pose=init_dumper_pose)
 
-        dumper_env.start()
+        # dumper_env.start()
 
 
 if __name__ == '__main__':

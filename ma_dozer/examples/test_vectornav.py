@@ -20,6 +20,7 @@ class LogIMU:
 
     def imu_read(self, curr_topic: str, curr_data: str):
         curr_imu_measurement = IMUData.from_zmq_str(curr_data)
+        
         imu_data_np = np.asarray(
                     [
                         curr_imu_measurement.timestamp,
@@ -72,6 +73,7 @@ if __name__ == '__main__':
     thread_imu.start()
 
     count_sec = 0
+
     while count_sec < 30:
         time.sleep(1.)
         log_imu.print_data()
@@ -79,7 +81,9 @@ if __name__ == '__main__':
 
     time.sleep(1.)
     thread_imu.end_thread()
+
     thread_imu.join()
+
     log_imu.logger.close_logger_files()
 
     print('Program closed')
