@@ -16,37 +16,19 @@ class LogIMU:
         self.imu_buffer_cnt = 0
         self.IMU_BUFFER_CNT_MAX = 100
 
-        self.logger = Logger()
+        self.logger = Logger('test')
 
     def imu_read(self, curr_topic: str, curr_data: str):
         curr_imu_measurement = IMUData.from_zmq_str(curr_data)
-        imu_data_np = np.asarray(
-                    [
-                        curr_imu_measurement.timestamp,
-                        curr_imu_measurement.delta_t,
-                        curr_imu_measurement.delta_velocity.dv_x,
-                        curr_imu_measurement.delta_velocity.dv_y,
-                        curr_imu_measurement.delta_velocity.dv_z,
-                        curr_imu_measurement.delta_theta.delta_yaw,
-                        curr_imu_measurement.delta_theta.delta_pitch,
-                        curr_imu_measurement.delta_theta.delta_roll
-                    ])
 
-        self.imu_buffer.append(imu_data_np)
-        self.imu_buffer_cnt += 1
-        if self.imu_buffer_cnt == self.IMU_BUFFER_CNT_MAX:
-            print(f'{time.time_ns()} write to file...')
-            self.logger.log_imu_readings_buffer(imu_buffer=np.array(self.imu_buffer), buff_len=self.IMU_BUFFER_CNT_MAX)
-            self.imu_buffer_cnt = 0
-            self.imu_buffer = []
+        self.logger.IMU_BUFFER_CNT_MAX = self.IMU_BUFFER_CNT_MAX
 
-            # self.logger.log_imu_readings(curr_imu_measurement)
-            # yakov
-            # print('wrote to imu_csv_file')
+        print(f'{time.time_ns()} write to file...')
+        self.logger.add_to_imu_buffer(curr_imu_measurement)
 
     def print_data(self):
-        if len(self.imu_buffer) > 0:
-            print(f'{self.imu_buffer[-1]}')
+        if len(self.logger.imu_buffer) > 0:
+            print(f'{self.logger.imu_buffer[-1]}')
 
 
 if __name__ == '__main__':

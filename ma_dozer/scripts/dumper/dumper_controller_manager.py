@@ -1,3 +1,4 @@
+import sys
 import time
 from threading import Thread
 from typing import Union
@@ -14,7 +15,7 @@ from ma_dozer.utils.zmq.infrastructure import Publisher
 
 class DumperControlManager(Thread):
 
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, exit_event):
 
         super(DumperControlManager, self).__init__()
 
@@ -34,7 +35,7 @@ class DumperControlManager(Thread):
         self.dumper_position_publisher: Publisher = Publisher(ip=self.config.dumper.ip,
                                                               port=self.config.dumper.kalman_position_port)
 
-        self.logger: Logger = Logger()
+        self.logger: Logger = Logger(self.config.dumper.name)
         self.enable_meas_log: bool = False
 
         self.controller: PIDController = PIDController(controller_config=self.config.dozer.controller,
@@ -45,28 +46,40 @@ class DumperControlManager(Thread):
         self.imu_message_counter = 0
         self.imu_message_div = 5
 
-        self.init_imu_time_flag: bool = False
-        self.time_sync_imu_camera = 0
+        # self.init_imu_time_flag: bool = False
+
+        self.init_time = 0
+        self.init_step_flag = True
+
+        self.exit_event = exit_event
+
+        self.logger.write_head_to_file()
 
     def update_action(self, curr_topic: str, curr_data: str):
         if curr_topic != self.config.topics.topic_algo_dumper_action:
             return
 
         target_action = Action.from_zmq_str(curr_data)
+        self.target_action = target_action
+        # yakov
+        print(f"target_action.is_init_action = {target_action.is_init_action}")
 
         if target_action.is_init_action:
             curr_data = target_action.to_zmq_str()
             self.init_pose = target_action.to_pose(time.time_ns())
+            # Aviad
+            self.init_time = time.time_ns()
+            print(self.init_time)
+            self.logger.init_time = self.init_time
             self.curr_pose = target_action.to_pose()
             self.enable_meas_log = True
-            self.init_imu_time_flag = True
+            self.init_step_flag = False
             self.is_finished = True
             self.dumper_publisher_ack.send(self.config.topics.topic_dumper_ack_received, curr_data)
             print(f'Sent ACK_RECEIVED {target_action}')
             self.dumper_publisher_ack.send(self.config.topics.topic_dumper_ack_finished, curr_data)
             print(f'Sent init ACK_FINISHED {self.target_action}')
             self.action_update_flag = False
-            # self.logger.log_camera_gt(self.curr_pose)
             return
 
         self.target_action = target_action
@@ -83,7 +96,6 @@ class DumperControlManager(Thread):
                               CompareType.ALL):
 
             self.is_finished = True
-            curr_data = self.target_action.to_zmq_str()
             self.dumper_publisher_ack.send(self.config.topics.topic_dumper_ack_finished, curr_data)
             print(f'Sent ACK_FINISHED {self.target_action}')
             self.action_update_flag = False
@@ -93,18 +105,12 @@ class DumperControlManager(Thread):
         if self.pose_init_stage:
             return
 
+        curr_imu_measurement = IMUData.from_zmq_str(curr_data)
+        if True:  # self.enable_meas_log:
+                self.logger.add_to_imu_buffer(curr_imu_measurement)
+
         if self.config.dumper.controller.use_ekf:
-
-            curr_imu_measurement = IMUData.from_zmq_str(curr_data)
             strap_down_measurement = self.pose_estimator.update_imu_measurement(curr_imu_measurement)
-
-            if self.init_imu_time_flag:
-                self.time_sync_imu_camera = curr_imu_measurement.timestamp - self.init_pose.timestamp
-                self.init_imu_time_flag = False
-
-            if self.enable_meas_log:
-                curr_imu_measurement.timestamp -= self.time_sync_imu_camera
-                self.logger.log_imu_readings(curr_imu_measurement)
 
             rotation_rad = strap_down_measurement.att
             rotation_deg = rotation_rad / np.pi * 180
@@ -123,7 +129,8 @@ class DumperControlManager(Thread):
             self.imu_message_counter += 1
 
             if self.imu_message_counter % self.imu_message_div == 0:
-                print(curr_dumper_pose)
+                pass
+                # print(curr_dumper_pose)
 
         else:
             return
@@ -132,12 +139,15 @@ class DumperControlManager(Thread):
 
         curr_aruco_pose = Pose.from_zmq_str(curr_data)
 
-        if curr_topic == self.config.topics.topic_dozer_position and self.enable_meas_log:
-            self.logger.log_camera_gt(curr_aruco_pose)
-        elif curr_topic == self.config.topics.topic_estimated_dozer_position and self.enable_meas_log:
-            self.logger.log_camera_est(curr_aruco_pose)
+        if curr_topic == self.config.topics.topic_dumper_position:  # and self.enable_meas_log:
+            self.logger.add_to_cam_gt_buffer(curr_aruco_pose)
+
+        elif curr_topic == self.config.topics.topic_estimated_dumper_position:  # and self.enable_meas_log:
+            self.logger.add_to_cam_est_buffer(curr_aruco_pose)
 
         if self.config.use_estimated_aruco_pose and curr_topic == self.config.topics.topic_dumper_position:
+            return
+        elif not self.config.use_estimated_aruco_pose and curr_topic == self.config.topics.topic_estimated_dumper_position:
             return
 
         if self.config.dumper.controller.use_ekf:
@@ -168,13 +178,13 @@ class DumperControlManager(Thread):
                                                     curr_data)
 
                 # print(f'Aruco Measurement {curr_aruco_pose}')
-                # self.controller.update_pose(curr_aruco_pose)
+                self.controller.update_pose(curr_aruco_pose)
 
         else:
             self.curr_pose = curr_aruco_pose.copy()
             self.controller.update_pose(curr_aruco_pose)
             self.pose_init_stage = False
-            print(f'Aruco Measurement {curr_aruco_pose}')
+            # print(f'Aruco Measurement {curr_aruco_pose}')
 
     def read(self):
         return self.is_finished
@@ -185,30 +195,33 @@ class DumperControlManager(Thread):
 
             if self.action_update_flag and not self.is_finished and self.curr_pose is not None:
 
-                while not self.is_finished:
+                if self.exit_event.is_set():
+                    self.logger.close_logger_files()
+                    self.controller.stop()
+                    sys.exit(0)
 
-                    if self.target_action is not None:  # and motion_type is not None
+                if self.target_action is not None and not self.init_step_flag:  # and motion_type is not None
+                    print(f'Before - curr pos: {self.curr_pose.position}, {self.curr_pose.rotation.yaw}\n       '
+                          f'target pos: {self.target_action.position}, {self.target_action.rotation.yaw}')
 
-                        self.controller.update_target_pose(self.target_action)
-                        self.controller.move_to_pose()
+                    self.controller.update_target_pose(self.target_action)  # motion_type
+                    self.controller.move_to_pose()
 
-                        self.is_finished = epsilon_close_plan(self.config.dumper.controller,
-                                                              self.curr_pose,
-                                                              self.target_action,
-                                                              CompareType.ALL)
+                    print(f'After - curr pos: {self.curr_pose.position}, {self.curr_pose.rotation.yaw}\n      '
+                          f'target pos: {self.target_action.position}, {self.target_action.rotation.yaw}')
 
-                        if self.is_finished:
-                            self.controller.stop()
-                            break
+                    time.sleep(0.01)
 
-                if self.is_finished:
                     curr_data = self.target_action.to_zmq_str()
                     self.dumper_publisher_ack.send(self.config.topics.topic_dumper_ack_finished, curr_data)
                     print(f'Sent ACK_FINISHED {self.target_action}')
                     self.action_update_flag = False
 
+            time.sleep(0.01)
+
     def stop(self):
         print('Exit control manger')
         self.is_stop = True
+        self.logger.close_logger_files()
         time.sleep(1)
         self.controller.stop()

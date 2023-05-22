@@ -98,7 +98,6 @@ class Logger:
 
         self.log_camera_gt_buffer()
         self.camera_gt_file.close()
-
         self.controller_log_file.close()
 
     def write_head_to_file(self):
@@ -162,5 +161,4 @@ class Logger:
         self.imu_buffer = self.imu_buffer[~np.all(self.imu_buffer == 0, axis=1)]
         self.cam_gt_buffer = self.cam_gt_buffer[~np.all(self.cam_gt_buffer == 0, axis=1)]
         self.cam_est_buffer = self.cam_est_buffer[~np.all(self.cam_est_buffer == 0, axis=1)]
-        
 
