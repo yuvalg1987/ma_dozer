@@ -11,6 +11,7 @@ class Publisher:
 
         self.context: zmq.Context = zmq.Context()
         self.pub_socket = self.context.socket(zmq.PUB)
+        # self.pub_socket.setsockopt(zmq.LINGER, 0)
         self.pub_socket.bind("tcp://%s:%d" % (ip, port))
 
     def send(self, topic_name: str, message_data) -> None:

@@ -1,3 +1,4 @@
+import sys
 import time
 from threading import Thread
 from typing import Optional
@@ -30,18 +31,18 @@ class Env(Thread):
     def step(self, action: Optional[Action]):
 
         self.algo_messaging_thread.send_action(action, self.name)
-        print(f'{self.name} - Action was sent: {action}')
+        print(f'{self.name.upper()} - Action was sent: {action}')
 
         while not self.algo_messaging_thread.check_ack_received(action, self.name):
             time.sleep(0.005)
 
-        print(f"real env received acknowledgment from dozer for action:{action}")
+        print(f"action removed from {self.name.upper()} received dictionary for action:{action}")
         time_start = time.time()
 
         while not self.algo_messaging_thread.check_ack_finished(action, self.name):
             time.sleep(0.005)
 
-        print(f"real env received finished from dozer for action:{action}")
+        print(f"action removed from {self.name.upper()} finished dictionary for action:{action}")
 
         time_end = time.time()
         action_time = time_end - time_start
@@ -51,21 +52,27 @@ class Env(Thread):
         return is_done
 
     def run(self):
-        is_done = False
+        if self.init_pose is not None:
+            is_done = False
 
-        # get actions from files
-        self.action = Action.from_zmq_str(self.action_file.readline())
-        self.action = self.action + self.init_pose
-        print(f'INIT Action: {self.action}, {self.action.is_init_action}')
-        while not is_done:
-            print("sending next action")
+            # get actions from files
+            self.action = Action.from_zmq_str(self.action_file.readline())
+            self.action = self.action + self.init_pose
+            print(f'{self.name.upper()} Send start Action: {self.action}')
+            while not is_done:
+                print(f"    {self.name.upper()}: sending next action {self.action}")
 
-            # run action
-            is_done = self.step(self.action)
+                # run action
+                is_done = self.step(self.action)
+
+            sys.exit(0)
+        else:
+            print(f'{self.name.upper()}: init position is None')
 
     def is_done(self):
         next_action = self.action_file.readline()
         if next_action == '':
+            print(f'{self.name} is finished its trajectory')
             return True
         else:
             self.action = Action.from_zmq_str(next_action)

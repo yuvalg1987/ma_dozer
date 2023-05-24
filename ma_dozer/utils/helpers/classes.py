@@ -472,7 +472,18 @@ class Action:
                f'Z = {self.position.z:.3f}, ' + \
                f'Yaw = {self.rotation.euler.yaw:.3f}, ' + \
                f'Pitch = {self.rotation.euler.pitch:.3f}, ' + \
-               f'Roll = {self.rotation.euler.roll:.3f}'
+               f'Roll = {self.rotation.euler.roll:.3f}, ' \
+               f'motion_type = {self.motion_type}'
+
+    def __repr__(self):
+        return f'id = {self.vehicle_id}, ' + \
+            f'X = {self.position.x:.3f}, ' + \
+            f'Y = {self.position.y:.3f}, ' + \
+            f'Z = {self.position.z:.3f}, ' + \
+            f'Yaw = {self.rotation.euler.yaw:.3f}, ' + \
+            f'Pitch = {self.rotation.euler.pitch:.3f}, ' + \
+            f'Roll = {self.rotation.euler.roll:.3f}, ' \
+            f'motion_type = {self.motion_type}'
 
     def to_zmq_str(self):
 
@@ -488,7 +499,7 @@ class Action:
                f'{self.rotation.euler.yaw}#' + \
                f'{self.rotation.euler.pitch}#' + \
                f'{self.rotation.euler.roll}#' + \
-               f'{action_type}#' + \
+               f'{self.motion_type}#' + \
                f'{self.is_init_action}'
 
     @classmethod
@@ -505,7 +516,9 @@ class Action:
 
         return cls(x=float(x_str), y=float(y_str), z=float(z_str),
                    yaw=float(yaw_str), pitch=float(pitch_str), roll=float(roll_str),
-                   forward_movement=forward_movement, vehicle_id=int(id_str),
+                   forward_movement=forward_movement,
+                   vehicle_id=int(id_str),
+                   motion_type=MotorCommand[curr_action_type],
                    is_init_action=str2bool(is_init_action_str.strip()))
 
     @classmethod
@@ -534,8 +547,12 @@ class Action:
         return pose
 
     def __add__(self, other):
-        pos_x = self.position.x + other.position.x
-        pos_y = self.position.y + other.position.y
+        r = np.sqrt(self.position.x**2 + self.position.y**2)
+        psi = np.arctan2(self.position.y, self.position.x) + np.radians(other.rotation.yaw)
+        new_pos_x = other.position.x + r * np.cos(psi)
+        new_pos_y = other.position.y + r * np.sin(psi)
+        pos_x = new_pos_x
+        pos_y = new_pos_y
         pos_z = self.position.z + other.position.z
         rot_yaw = self.rotation.yaw + other.rotation.yaw
         rot_pitch = self.rotation.pitch + other.rotation.pitch

@@ -56,8 +56,8 @@ class CameraNodeConfig(BaseModel):
     dozer_position_port: int = 1234
     dozer_estimated_position_port: int = 1235
 
-    dumper_position_port: int = 1236
-    dumper_estimated_position_port: int = 1237
+    dumper_position_port: int = 1240
+    dumper_estimated_position_port: int = 1241
 
     color_image_address: str = None
     depth_image_address: str = None
@@ -174,7 +174,7 @@ class DozerNode(BaseModel):
     path_port: int = 1236
     name: str = 'dozer'
 
-    action_file_path: str = './1_actions.txt'
+    action_file_path: str = './3_actions.txt'
 
     imu_port: str = 'COM4'  # '/dev/ttyUSB0' # 'COM7 or COM8 for Windows
     imu_baud_rate: int = 115200
@@ -191,7 +191,7 @@ class DumperNode(BaseModel):
     path_port: int = 1236
     name: str = 'dumper'
 
-    action_file_path = './1_actions.txt'
+    action_file_path = './3_actions.txt'
 
     imu_port = '/dev/ttyUSB0'  # 'COM7 or COM8 for Windows
     imu_baud_rate = 115200
