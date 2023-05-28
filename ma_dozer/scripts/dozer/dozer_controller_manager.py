@@ -47,15 +47,11 @@ class DozerControlManager(Thread):
         self.imu_message_counter = 0
         self.imu_message_div = 5
 
-        self.init_time_flag: bool = False
-        self.time_sync_pc_imu = 0
-        self.time_sync_pc_camera = 0
-
         self.init_time = 0
         self.init_step_flag = True
 
         self.exit_event = exit_event
-        
+
         self.logger.write_head_to_file()
 
     def update_action(self, curr_topic: str, curr_data: str):
@@ -102,20 +98,24 @@ class DozerControlManager(Thread):
             self.dozer_publisher_ack.send(self.config.topics.topic_dozer_ack_finished, curr_data)
             print(f'Sent ACK_FINISHED {self.target_action}')
             self.action_update_flag = False
-            
+        else:
+            print('action ignored epsilon planner')
+
         if not (self.target_action.position.x - 30 <= self.curr_pose.position.x <= self.target_action.position.x + 30 and \
-            self.target_action.position.y - 30 <= self.curr_pose.position.y <= self.target_action.position.y + 30):
+                self.target_action.position.y - 30 <= self.curr_pose.position.y <= self.target_action.position.y + 30):
             print(f'target is too far')
             self.is_finished = True
             self.dozer_publisher_ack.send(self.config.topics.topic_dozer_ack_finished, curr_data)
             print(f'Sent ACK_FINISHED {self.target_action}')
             self.action_update_flag = False
+        else:
+            print('action ignored 30cm bounding box')
 
     def update_pose_imu(self, curr_topic: str, curr_data: str):
 
         if self.pose_init_stage:
             return
-            
+
         curr_imu_measurement = IMUData.from_zmq_str(curr_data)
         # curr_imu_measurement = self.flip_axis(curr_imu_measurement)
         if True:  # self.enable_meas_log:
@@ -142,37 +142,15 @@ class DozerControlManager(Thread):
             self.imu_message_counter += 1
 
             if self.imu_message_counter % self.imu_message_div == 0:
-                pass  # print(curr_dozer_pose)
+                pass
+                # print(curr_dozer_pose)
 
-        # else:  # for DEBUG: save IMU when SD and EKF not activated
-        #     curr_imu_measurement = IMUData.from_zmq_str(curr_data)
-        #
-        #     if self.init_imu_time_flag:
-        #         self.time_sync_imu_camera = curr_imu_measurement.timestamp - self.init_pose.timestamp
-        #         self.init_imu_time_flag = False
-        #
-        #     if self.enable_meas_log:
-        #         curr_imu_measurement.timestamp -= self.time_sync_imu_camera
-        #
-        #         self.imu_buffer = np.append(self.imu_buffer, curr_imu_measurement)
-        #         self.imu_buffer_cnt += 1
-        #         if self.imu_buffer_cnt == self.IMU_BUFFER_CNT_MAX:
-        #             print(self.imu_buffer_cnt)
-        #             self.logger.log_imu_readings_buffer(imu_buffer=self.imu_buffer, buff_len=self.IMU_BUFFER_CNT_MAX)
-        #             self.imu_buffer_cnt = 0
-        #             self.imu_buffer = []
+        else:
+            return
 
     def update_pose_aruco(self, curr_topic: str, curr_data: str):
-        """
-        this method uses the "ESTINATED" pose for ekf.
-        if the received pose is of GT, the ekf should not be activated.
-        """
 
         curr_aruco_pose = Pose.from_zmq_str(curr_data)
-
-        # if self.init_time_flag:
-        #     self.time_sync_pc_camera = curr_aruco_pose.timestamp - self.init_pose.timestamp
-        #     self.init_time_flag = False
 
         if curr_topic == self.config.topics.topic_dozer_position:  # and self.enable_meas_log:
             self.logger.add_to_cam_gt_buffer(curr_aruco_pose)
@@ -182,7 +160,7 @@ class DozerControlManager(Thread):
 
         if self.config.use_estimated_aruco_pose and curr_topic == self.config.topics.topic_dozer_position:
             return
-        elif curr_topic == self.config.topics.topic_estimated_dozer_position:
+        elif not self.config.use_estimated_aruco_pose and curr_topic == self.config.topics.topic_estimated_dozer_position:
             return
 
         if self.config.dozer.controller.use_ekf:
@@ -215,9 +193,6 @@ class DozerControlManager(Thread):
                 # print(f'Aruco Measurement {curr_aruco_pose}')
                 self.controller.update_pose(curr_aruco_pose)
 
-                # print(f'sd position: {self.curr_pose.position}')
-                # print(f'sd rotation: {self.curr_pose.rotation}')
-
         else:
             self.curr_pose = curr_aruco_pose.copy()
             self.controller.update_pose(curr_aruco_pose)
@@ -238,25 +213,27 @@ class DozerControlManager(Thread):
                     self.controller.stop()
                     sys.exit(0)
 
-                if self.target_action is not None and not self.init_step_flag:  # and motion_type is not None
+                if self.target_action is not None and not self.init_step_flag:
                     print(f'Before - curr pos: {self.curr_pose.position}, {self.curr_pose.rotation.yaw}\n       '
                           f'target pos: {self.target_action.position}, {self.target_action.rotation.yaw}')
 
                     self.controller.update_target_pose(self.target_action)  # motion_type
                     self.controller.move_to_pose()
-                    
+
                     print(f'After - curr pos: {self.curr_pose.position}, {self.curr_pose.rotation.yaw}\n      '
                           f'target pos: {self.target_action.position}, {self.target_action.rotation.yaw}')
 
                     time.sleep(0.01)
-                
+
                     curr_data = self.target_action.to_zmq_str()
                     self.action_update_flag = False
                     self.dozer_publisher_ack.send(self.config.topics.topic_dozer_ack_finished, curr_data)
                     print(f'Sent ACK_FINISHED {self.target_action}')
-            
+
             time.sleep(0.01)
-            
+
+        return
+
     def stop(self):
         print('Exit control manger')
         self.is_stop = True
@@ -264,12 +241,13 @@ class DozerControlManager(Thread):
         time.sleep(1)
         self.controller.stop()
 
-    def flip_axis(self, meas: IMUData):
+    @staticmethod
+    def flip_axis(meas: IMUData):
         meas_flipped = IMUData(
-                     timestamp = copy.copy(meas.timestamp),
-                     delta_t = copy.copy(meas.delta_t),
-                     delta_velocity = meas.delta_velocity.copy(),
-                     delta_theta = meas.delta_theta.copy())
+                     timestamp=copy.copy(meas.timestamp),
+                     delta_t=copy.copy(meas.delta_t),
+                     delta_velocity=meas.delta_velocity.copy(),
+                     delta_theta=meas.delta_theta.copy())
 
         dv_x_old = meas_flipped.delta_velocity[0]
         dv_y_old = meas_flipped.delta_velocity[1]

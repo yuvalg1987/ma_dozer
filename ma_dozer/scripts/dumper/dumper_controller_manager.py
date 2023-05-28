@@ -3,6 +3,7 @@ import time
 from threading import Thread
 from typing import Union
 import numpy as np
+import copy
 
 from ma_dozer.configs.config import Config
 from ma_dozer.utils.controller.pid_contorller import PIDController
@@ -46,8 +47,6 @@ class DumperControlManager(Thread):
         self.imu_message_counter = 0
         self.imu_message_div = 5
 
-        # self.init_imu_time_flag: bool = False
-
         self.init_time = 0
         self.init_step_flag = True
 
@@ -68,13 +67,16 @@ class DumperControlManager(Thread):
             # Aviad
             self.init_time = time.time_ns()
             print(self.init_time)
+
             self.logger.init_time = self.init_time
             self.curr_pose = target_action.to_pose()
             self.enable_meas_log = True
+            self.init_time_flag = True
             self.init_step_flag = False
+
             self.is_finished = True
             self.dumper_publisher_ack.send(self.config.topics.topic_dumper_ack_received, curr_data)
-            print(f'Sent ACK_RECEIVED {target_action}')
+            print(f'Sent init ACK_RECEIVED {self.target_action}')
             self.dumper_publisher_ack.send(self.config.topics.topic_dumper_ack_finished, curr_data)
             print(f'Sent init ACK_FINISHED {self.target_action}')
             self.action_update_flag = False
@@ -109,16 +111,15 @@ class DumperControlManager(Thread):
         else:
             print('action ignored 30cm bounding box')
 
-        print(f'action flag: {self.action_update_flag}, is_finished: {self.is_finished}')
-
     def update_pose_imu(self, curr_topic: str, curr_data: str):
 
         if self.pose_init_stage:
             return
 
         curr_imu_measurement = IMUData.from_zmq_str(curr_data)
+        # curr_imu_measurement = self.flip_axis(curr_imu_measurement)
         if True:  # self.enable_meas_log:
-                self.logger.add_to_imu_buffer(curr_imu_measurement)
+            self.logger.add_to_imu_buffer(curr_imu_measurement)
 
         if self.config.dumper.controller.use_ekf:
             strap_down_measurement = self.pose_estimator.update_imu_measurement(curr_imu_measurement)
@@ -238,3 +239,21 @@ class DumperControlManager(Thread):
         self.logger.close_logger_files()
         time.sleep(1)
         self.controller.stop()
+
+    @staticmethod
+    def flip_axis(meas: IMUData):
+        meas_flipped = IMUData(
+                     timestamp=copy.copy(meas.timestamp),
+                     delta_t=copy.copy(meas.delta_t),
+                     delta_velocity=meas.delta_velocity.copy(),
+                     delta_theta=meas.delta_theta.copy())
+
+        dv_x_old = meas_flipped.delta_velocity[0]
+        dv_y_old = meas_flipped.delta_velocity[1]
+
+        meas_flipped.delta_velocity[0] = dv_y_old
+        meas_flipped.delta_velocity[1] = dv_x_old
+
+        meas_flipped.delta_theta[0] *= -1
+
+        return meas_flipped
