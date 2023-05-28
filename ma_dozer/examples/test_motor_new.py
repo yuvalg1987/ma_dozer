@@ -8,9 +8,9 @@ if __name__ == "__main__":
     roboclaw = Roboclaw("/dev/ttyS0", 38400)
     roboclaw.Open()
 
-
-    roboclaw.ForwardM1(address, 100);  # Cmd 0
     roboclaw.ForwardM2(address, 100);  # Cmd 5
+    roboclaw.ForwardM1(address, 100);  # Cmd 0
+
     time.sleep(2)
 
     # stop motors
@@ -27,7 +27,6 @@ if __name__ == "__main__":
     roboclaw.ForwardM2(address, 0);
     time.sleep(2)
     
-
     # turn right
     roboclaw.ForwardM1(address, 100);  # Cmd 0
     roboclaw.BackwardM2(address, 100);  # Cmd 5

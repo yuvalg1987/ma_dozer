@@ -39,8 +39,8 @@ class DozerControlManager(Thread):
         self.logger: Logger = Logger(self.config.dozer.name)
         self.enable_meas_log: bool = False
 
-        # self.controller: PIDController = PIDController(controller_config=self.config.dozer.controller,
-        #                                                logger=self.logger)
+        self.controller: PIDController = PIDController(controller_config=self.config.dozer.controller,
+                                                       logger=self.logger)
 
         self.pose_init_stage = True
         self.pose_estimator = PoseEstimator(navigation_config=config.dozer.navigation)
@@ -65,9 +65,6 @@ class DozerControlManager(Thread):
         target_action = Action.from_zmq_str(curr_data)
         self.target_action = target_action
 
-        # yakov
-        print(f"target_action.is_init_action = {target_action.is_init_action}")
-
         if target_action.is_init_action:
             curr_data = target_action.to_zmq_str()
             self.init_pose = target_action.to_pose(time.time_ns())
@@ -89,9 +86,6 @@ class DozerControlManager(Thread):
             self.action_update_flag = False
             return
 
-        # if self.init_time == 0:
-        #     return
-
         self.action_update_flag = True
         self.is_finished = False
 
@@ -108,20 +102,28 @@ class DozerControlManager(Thread):
             self.dozer_publisher_ack.send(self.config.topics.topic_dozer_ack_finished, curr_data)
             print(f'Sent ACK_FINISHED {self.target_action}')
             self.action_update_flag = False
+            
+        if not (self.target_action.position.x - 30 <= self.curr_pose.position.x <= self.target_action.position.x + 30 and \
+            self.target_action.position.y - 30 <= self.curr_pose.position.y <= self.target_action.position.y + 30):
+            print(f'target is too far')
+            self.is_finished = True
+            self.dozer_publisher_ack.send(self.config.topics.topic_dozer_ack_finished, curr_data)
+            print(f'Sent ACK_FINISHED {self.target_action}')
+            self.action_update_flag = False
 
     def update_pose_imu(self, curr_topic: str, curr_data: str):
 
         if self.pose_init_stage:
             return
+            
+        curr_imu_measurement = IMUData.from_zmq_str(curr_data)
+        # curr_imu_measurement = self.flip_axis(curr_imu_measurement)
+        if True:  # self.enable_meas_log:
+            self.logger.add_to_imu_buffer(curr_imu_measurement)
 
         if self.config.dozer.controller.use_ekf:
 
-            curr_imu_measurement = IMUData.from_zmq_str(curr_data)
-            # curr_imu_measurement = self.flip_axis(curr_imu_measurement)
             strap_down_measurement = self.pose_estimator.update_imu_measurement(curr_imu_measurement)
-
-            if True:  # self.enable_meas_log:
-                self.logger.add_to_imu_buffer(curr_imu_measurement)
 
             rotation_rad = strap_down_measurement.att
             rotation_deg = rotation_rad / np.pi * 180
@@ -135,7 +137,7 @@ class DozerControlManager(Thread):
                                                timestamp=strap_down_measurement.time)
 
             self.curr_pose = curr_dozer_pose.copy()
-            # self.controller.update_pose(curr_dozer_pose)
+            self.controller.update_pose(curr_dozer_pose)
 
             self.imu_message_counter += 1
 
@@ -189,7 +191,7 @@ class DozerControlManager(Thread):
 
                 self.curr_pose = curr_aruco_pose.copy()
                 self.pose_estimator.init(curr_aruco_pose)
-                # self.controller.update_pose(curr_aruco_pose)
+                self.controller.update_pose(curr_aruco_pose)
                 self.pose_init_stage = False
 
             else:
@@ -218,7 +220,7 @@ class DozerControlManager(Thread):
 
         else:
             self.curr_pose = curr_aruco_pose.copy()
-            # self.controller.update_pose(curr_aruco_pose)
+            self.controller.update_pose(curr_aruco_pose)
             self.pose_init_stage = False
             # print(f'Aruco Measurement {curr_aruco_pose}')
 
@@ -249,9 +251,9 @@ class DozerControlManager(Thread):
                     time.sleep(0.01)
                 
                     curr_data = self.target_action.to_zmq_str()
+                    self.action_update_flag = False
                     self.dozer_publisher_ack.send(self.config.topics.topic_dozer_ack_finished, curr_data)
                     print(f'Sent ACK_FINISHED {self.target_action}')
-                    self.action_update_flag = False
             
             time.sleep(0.01)
             
