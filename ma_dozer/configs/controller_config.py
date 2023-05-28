@@ -19,5 +19,5 @@ class ControllerConfig(BaseModel):
     backward_bias: float = 35
 
     print_control_mod: float = 5
-    eps_bound_distance: float = 0
+    eps_bound_distance: float = 25
     use_ekf: bool = False

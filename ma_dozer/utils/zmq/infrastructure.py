@@ -73,6 +73,7 @@ class ThreadedSubscriber(Thread):
 
     def stop(self):
         print('Exit thread')
+        # self.sub_zmq.close()
         self.is_stop = True
 
 

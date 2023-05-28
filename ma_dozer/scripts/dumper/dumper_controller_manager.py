@@ -61,8 +61,6 @@ class DumperControlManager(Thread):
 
         target_action = Action.from_zmq_str(curr_data)
         self.target_action = target_action
-        # yakov
-        print(f"target_action.is_init_action = {target_action.is_init_action}")
 
         if target_action.is_init_action:
             curr_data = target_action.to_zmq_str()
@@ -82,14 +80,13 @@ class DumperControlManager(Thread):
             self.action_update_flag = False
             return
 
-        self.target_action = target_action
         self.action_update_flag = True
         self.is_finished = False
 
         curr_data = self.target_action.to_zmq_str()
-        self.dumper_publisher_ack.send(self.config.topics.topic_dozer_ack_received, curr_data)
+        self.dumper_publisher_ack.send(self.config.topics.topic_dumper_ack_received, curr_data)
         print(f'Sent ACK_RECEIVED {target_action}')
-
+        
         if epsilon_close_plan(self.config.dumper.controller,
                               self.curr_pose,
                               self.target_action,
@@ -99,6 +96,20 @@ class DumperControlManager(Thread):
             self.dumper_publisher_ack.send(self.config.topics.topic_dumper_ack_finished, curr_data)
             print(f'Sent ACK_FINISHED {self.target_action}')
             self.action_update_flag = False
+        else:
+            print('action ignored epsilon planner')
+
+        if not (self.target_action.position.x - 30 <= self.curr_pose.position.x <= self.target_action.position.x + 30 and \
+                self.target_action.position.y - 30 <= self.curr_pose.position.y <= self.target_action.position.y + 30):
+            print(f'target is too far')
+            self.is_finished = True
+            self.dumper_publisher_ack.send(self.config.topics.topic_dumper_ack_finished, curr_data)
+            print(f'Sent ACK_FINISHED {self.target_action}')
+            self.action_update_flag = False
+        else:
+            print('action ignored 30cm bounding box')
+        
+        print(f'action flag: {self.action_update_flag}, is_finished: {self.is_finished}')
 
     def update_pose_imu(self, curr_topic: str, curr_data: str):
 
@@ -178,7 +189,7 @@ class DumperControlManager(Thread):
                                                     curr_data)
 
                 # print(f'Aruco Measurement {curr_aruco_pose}')
-                self.controller.update_pose(curr_aruco_pose)
+                self.controller.update_pose(curr_dumper_pose)
 
         else:
             self.curr_pose = curr_aruco_pose.copy()
@@ -200,7 +211,7 @@ class DumperControlManager(Thread):
                     self.controller.stop()
                     sys.exit(0)
 
-                if self.target_action is not None and not self.init_step_flag:  # and motion_type is not None
+                if self.target_action is not None and not self.init_step_flag:
                     print(f'Before - curr pos: {self.curr_pose.position}, {self.curr_pose.rotation.yaw}\n       '
                           f'target pos: {self.target_action.position}, {self.target_action.rotation.yaw}')
 
@@ -213,11 +224,13 @@ class DumperControlManager(Thread):
                     time.sleep(0.01)
 
                     curr_data = self.target_action.to_zmq_str()
+                    self.action_update_flag = False
                     self.dumper_publisher_ack.send(self.config.topics.topic_dumper_ack_finished, curr_data)
                     print(f'Sent ACK_FINISHED {self.target_action}')
-                    self.action_update_flag = False
 
             time.sleep(0.01)
+
+        return
 
     def stop(self):
         print('Exit control manger')

@@ -37,7 +37,7 @@ class PIDController:
 
         camera_calibration_dir = Path(__file__).parent.parent.parent / 'camera_calibration'
         self.lower_bound_w_h: np.ndarray = np.load((camera_calibration_dir / 'lower_bound_w.npy').as_posix())
-        self.upper_bound_w_h: np.ndarray = np.load((camera_calibration_dir / 'upper_bound_w.npy').as_posix())
+        self.upper_bound_w_h: np.ndarray = np.array([215, 215])  # np.load((camera_calibration_dir / 'upper_bound_w.npy').as_posix())
 
         self.left_bound: float = self.controller_config.eps_bound_distance
         self.down_bound: float = self.controller_config.eps_bound_distance
@@ -53,9 +53,16 @@ class PIDController:
         self.target_pose = target_pose
         self.curr_motor_command = target_pose.motion_type
 
-    def is_inside_bound(self):
+    def is_inside_sandbox_bound(self):
         if self.left_bound <= self.curr_pose.position.x <= self.right_bound and \
                 self.down_bound <= self.curr_pose.position.y <= self.up_bound:
+            return True
+        else:
+            return False
+        
+    def is_inside_target_bound(self):
+        if self.target_pose.position.x - 30 <= self.curr_pose.position.x <= self.target_pose.position.x + 30 and \
+                self.target_pose.position.y - 30 <= self.curr_pose.position.y <= self.target_pose.position.y + 30:
             return True
         else:
             return False
@@ -85,7 +92,12 @@ class PIDController:
             # if curr_delta_eps_pqr < -self.controller_config.eps_delta_yaw:
             #     break
 
-            if not self.is_inside_bound():
+            if not self.is_inside_sandbox_bound():
+                print('outside the sandbox')
+                break
+                
+            if not self.is_inside_target_bound():
+                print('outside the bounding box')
                 break
 
             self.prev_delta_pqr = delta_yaw
@@ -115,7 +127,12 @@ class PIDController:
             # if curr_delta_eps_pqr < -self.controller_config.eps_delta_yaw:
             #     break
 
-            if not self.is_inside_bound():
+            if not self.is_inside_sandbox_bound():
+                print('outside the sandbox')
+                break
+                
+            if not self.is_inside_target_bound():
+                print('outside the bounding box')
                 break
 
             self.prev_delta_pqr = delta_yaw
@@ -136,7 +153,6 @@ class PIDController:
         self.prev_delta_xyz = delta_xyz
 
         results = []
-
         while not res and not self.is_stop:
             res, delta_xyz, delta_yaw = epsilon_close_control(self.controller_config,
                                                               curr_pose=self.curr_pose,
@@ -150,8 +166,13 @@ class PIDController:
             # if curr_delta_eps_xyz < -self.controller_config.eps_delta_translation:
             #     break
 
-            # if not self.is_inside_bound():
-            #     break
+            if not self.is_inside_sandbox_bound():
+                print('outside the sandbox')
+                break
+                
+            if not self.is_inside_target_bound():
+                print('outside the bounding box')
+                break
 
             time.sleep(0.1)
             self.prev_delta_xyz = delta_xyz
@@ -185,7 +206,12 @@ class PIDController:
             # if curr_delta_eps_xyz < -self.controller_config.eps_delta_translation:
             #     break
 
-            if not self.is_inside_bound():
+            if not self.is_inside_sandbox_bound():
+                print('outside the sandbox')
+                break
+                
+            if not self.is_inside_target_bound():
+                print('outside the bounding box')
                 break
 
             time.sleep(0.1)
