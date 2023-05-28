@@ -19,23 +19,23 @@ def add_str_action(action_file, id_agent, pose_x, pose_y, yaw_ang, motor_command
 
 
 def main():
-    traj_action_file = open('../../scripts/algo/1_actions.txt', 'w')
+    traj_action_file = open('../../scripts/algo/6_actions.txt', 'w')
     agent_id = 3
 
     MotorCommand = Enum('MotorCommand', 'FORWARD BACKWARD ROTATE_LEFT ROTATE_RIGHT')
 
-    max_distance_per_step = 5
-    max_rot_per_step = 5
+    max_distance_per_step = 10
+    max_rot_per_step = 30
     eps = 1e-4
 
     commands = [[MotorCommand.FORWARD, 50],
-                [MotorCommand.ROTATE_LEFT, 30],
+                [MotorCommand.BACKWARD, 50],
                 [MotorCommand.FORWARD, 50],
-                [MotorCommand.ROTATE_LEFT, 30],
+                [MotorCommand.BACKWARD, 50],
                 [MotorCommand.FORWARD, 50],
-                [MotorCommand.ROTATE_LEFT, 30],
-                [MotorCommand.FORWARD, 50],
-                [MotorCommand.BACKWARD, 100]]
+                [MotorCommand.BACKWARD, 50],
+                [MotorCommand.FORWARD, 50]
+                ]
 
     anchor_coord = np.array([[0, 0]])
     yaw = 0
@@ -66,7 +66,7 @@ def main():
                 yaw = yaw + np.radians(max_rot_per_step)
                 add_str_action(traj_action_file, agent_id, anchor_coord[i-1, 0], anchor_coord[i-1, 1], yaw, command[0], i)
         elif command[0] == MotorCommand.ROTATE_RIGHT:
-            end_yaw = yaw + np.radians(command[1])
+            end_yaw = yaw - np.radians(command[1])
             while np.abs(yaw - end_yaw) > eps:
                 yaw = yaw + np.radians(-max_rot_per_step)
                 add_str_action(traj_action_file, agent_id, anchor_coord[i-1, 0], anchor_coord[i-1, 1], yaw, command[0], i)

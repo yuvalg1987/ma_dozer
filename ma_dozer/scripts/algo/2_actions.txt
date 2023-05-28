@@ -1,0 +1,12 @@
+3#0#0#0#0.0#0#0#MotorCommand.FORWARD#True
+3#0#0#0#30.0#0#0#MotorCommand.ROTATE_LEFT#False
+3#8.6603#5.0#0#30.0#0#0#MotorCommand.FORWARD#False
+3#17.3205#10.0#0#30.0#0#0#MotorCommand.FORWARD#False
+3#25.9808#15.0#0#30.0#0#0#MotorCommand.FORWARD#False
+3#25.9808#15.0#0#60.0#0#0#MotorCommand.ROTATE_LEFT#False
+3#30.9808#23.6603#0#60.0#0#0#MotorCommand.FORWARD#False
+3#35.9808#32.3205#0#60.0#0#0#MotorCommand.FORWARD#False
+3#35.9808#32.3205#0#90.0#0#0#MotorCommand.ROTATE_LEFT#False
+3#35.9808#22.3205#0#90.0#0#0#MotorCommand.BACKWARD#False
+3#35.9808#12.3205#0#90.0#0#0#MotorCommand.BACKWARD#False
+3#35.9808#2.3205#0#90.0#0#0#MotorCommand.BACKWARD#False
