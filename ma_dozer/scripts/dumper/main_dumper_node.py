@@ -66,11 +66,11 @@ def main():
     win.show()
     app.exec()
 
+    control_manager.stop()
     aruco_est_position_subscriber.stop()
     aruco_gt_position_subscriber.stop()
     imu_measurement_subscriber.end_thread()
     action_subscriber.stop()
-    control_manager.stop()
 
     control_manager.join()
     print('control manager finished')
