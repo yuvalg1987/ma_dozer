@@ -67,12 +67,10 @@ class DozerControlManager(Thread):
             # Aviad
             self.init_time = time.time_ns()
             print(self.init_time)
-
             self.logger.init_time = self.init_time
             self.curr_pose = target_action.to_pose()
             self.enable_meas_log = True
             self.init_step_flag = False
-
             self.is_finished = True
             self.dozer_publisher_ack.send(self.config.topics.topic_dozer_ack_received, curr_data)
             print(f'Sent init ACK_RECEIVED {self.target_action}')
