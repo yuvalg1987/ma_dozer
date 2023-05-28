@@ -59,7 +59,7 @@ class PIDController:
             return True
         else:
             return False
-        
+
     def is_inside_target_bound(self):
         if self.target_pose.position.x - 30 <= self.curr_pose.position.x <= self.target_pose.position.x + 30 and \
                 self.target_pose.position.y - 30 <= self.curr_pose.position.y <= self.target_pose.position.y + 30:
@@ -130,7 +130,7 @@ class PIDController:
             if not self.is_inside_sandbox_bound():
                 print('outside the sandbox')
                 break
-                
+
             if not self.is_inside_target_bound():
                 print('outside the bounding box')
                 break

@@ -34,13 +34,17 @@ class AlgoMessagingThread(Thread):
         # publisher, algo -> dozer / dumper send action
         self.algo_action_publisher = Publisher(ip=config.algo.ip, port=config.algo.action_port)
 
-        # subscriber, dozer / dumper -> algo, dozer received action, dozer finished action
-        self.ack_subscriber = Subscriber(ip=config.dozer.ip,
-                                         port=config.dozer.ack_port,
-                                         topics=[config.topics.topic_dozer_ack_received,
-                                                 config.topics.topic_dozer_ack_finished,
-                                                 config.topics.topic_dumper_ack_received,
-                                                 config.topics.topic_dumper_ack_finished])
+        # subscriber, dozer -> algo, dozer received action, dozer finished action
+        self.dozer_ack_subscriber = Subscriber(ip=config.dozer.ip,
+                                               port=config.dozer.ack_port,
+                                               topics=[config.topics.topic_dozer_ack_received,
+                                                       config.topics.topic_dozer_ack_finished])
+
+        # subscriber, dumper -> algo, dozer received action, dozer finished action
+        self.dumper_ack_subscriber = Subscriber(ip=config.dumper.ip,
+                                                port=config.dumper.ack_port,
+                                                topics=[config.topics.topic_dumper_ack_received,
+                                                        config.topics.topic_dumper_ack_finished])
 
         # subscriber, camera -> algo, dozer current position
         self.dozer_position_subscriber = Subscriber(ip=config.camera.ip,
@@ -52,7 +56,8 @@ class AlgoMessagingThread(Thread):
                                                      topics=[config.topics.topic_dumper_position])
 
         self.subscriber_poller = zmq.Poller()
-        self.subscriber_poller.register(self.ack_subscriber.get_socket(), zmq.POLLIN)
+        self.subscriber_poller.register(self.dozer_ack_subscriber.get_socket(), zmq.POLLIN)
+        self.subscriber_poller.register(self.dumper_ack_subscriber.get_socket(), zmq.POLLIN)
         self.subscriber_poller.register(self.dozer_position_subscriber.get_socket(), zmq.POLLIN)
         self.subscriber_poller.register(self.dumper_position_subscriber.get_socket(), zmq.POLLIN)
 
@@ -64,6 +69,7 @@ class AlgoMessagingThread(Thread):
         curr_topic = None
         curr_data = None
 
+        # connect to camera
         flag_init_dozer_pos = False
         flag_init_dumper_pos = False
         while True:
@@ -94,7 +100,8 @@ class AlgoMessagingThread(Thread):
                                    pitch=self.dozer_curr_pose.rotation.pitch,
                                    roll=self.dozer_curr_pose.rotation.roll,
                                    forward_movement=True,
-                                   vehicle_id=self.dozer_curr_pose.vehicle_id)
+                                   vehicle_id=self.dozer_curr_pose.vehicle_id,
+                                   is_init_action=True)
 
         init_dumper_action = Action(x=self.dumper_curr_pose.position.x,
                                     y=self.dumper_curr_pose.position.y,
@@ -103,26 +110,50 @@ class AlgoMessagingThread(Thread):
                                     pitch=self.dumper_curr_pose.rotation.pitch,
                                     roll=self.dumper_curr_pose.rotation.roll,
                                     forward_movement=True,
-                                    vehicle_id=self.dumper_curr_pose.vehicle_id)
+                                    vehicle_id=self.dumper_curr_pose.vehicle_id,
+                                    is_init_action=True)
 
         flag_init_dozer_ack = False
         flag_init_dumper_ack = False
 
+        # connect actions
         dumper_attempts = 10
+        dozer_attempts = 10
         while True:
 
             socks = dict(self.subscriber_poller.poll(20))  # 20ms
 
             if socks:
-                if (self.ack_subscriber.get_socket() in socks and
-                        socks[self.ack_subscriber.get_socket()] == zmq.POLLIN):
-                    curr_topic, curr_data = self.ack_subscriber.receive()
+                if (self.dozer_ack_subscriber.get_socket() in socks and
+                        socks[self.dozer_ack_subscriber.get_socket()] == zmq.POLLIN):
+
+                    curr_topic, curr_data = self.dozer_ack_subscriber.receive()
 
                     if curr_topic == self.config.topics.topic_dozer_ack_received and not flag_init_dozer_ack:
                         curr_dozer_action = Action.from_zmq_str(curr_data)
                         print(f'Received ACK for Init dozer action {curr_dozer_action}')
                         flag_init_dozer_ack = True
-                    elif curr_topic == self.config.topics.topic_dumper_ack_received and not flag_init_dumper_ack:
+
+                    if flag_init_dozer_ack and flag_init_dumper_ack:
+                        break
+
+                    if not flag_init_dozer_ack and dozer_attempts > 0:
+                        print(f'Send init dozer action = {init_dozer_action}')
+                        self.algo_action_publisher.send(self.config.topics.topic_algo_dozer_action,
+                                                        init_dozer_action.to_zmq_str())
+                        time.sleep(0.5)
+                        dozer_attempts -= 1
+
+                        if dozer_attempts == 0:
+                            print('could not init connection with DOZER action ack')
+                            flag_init_dozer_ack = True
+
+                elif (self.dumper_ack_subscriber.get_socket() in socks and
+                        socks[self.dumper_ack_subscriber.get_socket()] == zmq.POLLIN):
+
+                    curr_topic, curr_data = self.dumper_ack_subscriber.receive()
+
+                    if curr_topic == self.config.topics.topic_dumper_ack_received and not flag_init_dumper_ack:
                         curr_dumper_action = Action.from_zmq_str(curr_data)
                         print(f'Received ACK for Init dumper action {curr_dumper_action}')
                         flag_init_dumper_ack = True
@@ -130,94 +161,124 @@ class AlgoMessagingThread(Thread):
                     if flag_init_dozer_ack and flag_init_dumper_ack:
                         break
 
-                    if not flag_init_dozer_ack:
-                        print(f'Send init dozer action = {init_dozer_action}')
-                        self.algo_action_publisher.send(self.config.topics.topic_algo_dozer_action,
-                                                        init_dozer_action.to_zmq_str())
-                        time.sleep(0.5)
                     if not flag_init_dumper_ack and dumper_attempts > 0:
-                        print(f'Send init dozer action = {init_dumper_action}')
+                        print(f'Send init dumper action = {init_dumper_action}')
                         self.algo_action_publisher.send(self.config.topics.topic_algo_dumper_action,
                                                         init_dumper_action.to_zmq_str())
                         time.sleep(0.5)
                         dumper_attempts -= 1
 
                         if dumper_attempts == 0:
+                            print('could not init connection with DUMPER action ack')
                             flag_init_dumper_ack = True
 
                 else:
-                    print(f'Send init dozer action = {init_dozer_action}')
-                    self.algo_action_publisher.send(self.config.topics.topic_algo_dozer_action,
-                                                    init_dozer_action.to_zmq_str())
-                    time.sleep(0.5)
+                    if not flag_init_dozer_ack and dozer_attempts > 0:
+                        print(f'Send init dozer action = {init_dozer_action}')
+                        self.algo_action_publisher.send(self.config.topics.topic_algo_dozer_action,
+                                                        init_dozer_action.to_zmq_str())
+                        time.sleep(0.5)
+                        dozer_attempts -= 1
+                        if dozer_attempts == 0:
+                            print('could not init connection with DOZER action ack')
+                            flag_init_dozer_ack = True
 
-                    if dumper_attempts > 0:
+                    if not flag_init_dumper_ack and dumper_attempts > 0:
                         print(f'Send init dumper action = {init_dumper_action}')
                         self.algo_action_publisher.send(self.config.topics.topic_algo_dumper_action,
                                                         init_dumper_action.to_zmq_str())
                         time.sleep(0.5)
                         dumper_attempts -= 1
                         if dumper_attempts == 0:
+                            print('could not init connection with DUMPER action ack')
                             flag_init_dumper_ack = True
 
-            else:
-                print(f'Send init dozer action = {init_dozer_action}')
-                self.algo_action_publisher.send(self.config.topics.topic_algo_dozer_action,
-                                                init_dozer_action.to_zmq_str())
-                time.sleep(0.5)
+                print(f'dozer attempts: {dozer_attempts} flag: {flag_init_dozer_ack}')
+                print(f'dumper attempts: {dumper_attempts} flag: {flag_init_dumper_ack}')
+                if flag_init_dozer_ack and flag_init_dumper_ack:
+                    break
 
-                if dumper_attempts > 0:
+            else:
+                if not flag_init_dozer_ack and dozer_attempts > 0:
+                    print(f'Send init dozer action = {init_dozer_action}')
+                    self.algo_action_publisher.send(self.config.topics.topic_algo_dozer_action,
+                                                    init_dozer_action.to_zmq_str())
+                    time.sleep(0.5)
+                    dozer_attempts -= 1
+                    if dozer_attempts == 0:
+                        print('could not init connection with DOZER action ack')
+                        flag_init_dozer_ack = True
+
+                if not flag_init_dumper_ack and dumper_attempts > 0:
                     print(f'Send init dumper action = {init_dumper_action}')
                     self.algo_action_publisher.send(self.config.topics.topic_algo_dumper_action,
                                                     init_dumper_action.to_zmq_str())
                     time.sleep(0.5)
                     dumper_attempts -= 1
                     if dumper_attempts == 0:
+                        print('could not init connection with DUMPER action ack')
                         flag_init_dumper_ack = True
+
+        if dozer_attempts == 0:
+            self.dozer_curr_pose = None
+        if dumper_attempts == 0:
+            self.dumper_curr_pose = None
 
     def run(self):
         while True:
             socks = dict(self.subscriber_poller.poll(20))  # 20ms
 
             if socks:
-                if (self.ack_subscriber.get_socket() in socks and
-                        socks[self.ack_subscriber.get_socket()] == zmq.POLLIN):
+                if (self.dozer_ack_subscriber.get_socket() in socks and
+                        socks[self.dozer_ack_subscriber.get_socket()] == zmq.POLLIN):
 
-                    curr_topic, curr_data = self.ack_subscriber.receive()
+                    curr_topic, curr_data = self.dozer_ack_subscriber.receive()
                     curr_algo_action = Action.from_zmq_str(curr_data)
 
                     if curr_topic == self.config.topics.topic_dozer_ack_received:
-                        print(f'ACK received from dozer for action {curr_algo_action}')
+                        print(f'DOZER: ACK received from dozer for action {curr_algo_action}')
                         self.dozer_ack_received[curr_algo_action] = True
 
                     if curr_topic == self.config.topics.topic_dozer_ack_finished:
-                        print(f'ACK finished from dozer for action = {curr_algo_action}')
+                        print(f'DOZER: ACK finished from dozer for action = {curr_algo_action}')
                         self.dozer_ack_finished[curr_algo_action] = True
 
                     if curr_topic == self.config.topics.topic_dozer_ack_intermediate_state:
-                        print(f'ACK intermediate state from dozer for position = {curr_algo_action}')
+                        print(f'DOZER: ACK intermediate state from dozer for position = {curr_algo_action}')
                         self.dozer_ack_intermediate_state.append(curr_algo_action)
 
+                if (self.dumper_ack_subscriber.get_socket() in socks and
+                        socks[self.dumper_ack_subscriber.get_socket()] == zmq.POLLIN):
+
+                    curr_topic, curr_data = self.dumper_ack_subscriber.receive()
+                    curr_algo_action = Action.from_zmq_str(curr_data)
+
                     if curr_topic == self.config.topics.topic_dumper_ack_received:
-                        print(f'ACK received from dumper for action {curr_algo_action}')
+                        print(f'DUMPER: ACK received from dumper for action {curr_algo_action}')
                         self.dumper_ack_received[curr_algo_action] = True
 
                     if curr_topic == self.config.topics.topic_dumper_ack_finished:
-                        print(f'ACK finished from dumper for action = {curr_algo_action}')
+                        print(f'DUMPER: ACK finished from dumper for action = {curr_algo_action}')
                         self.dumper_ack_finished[curr_algo_action] = True
 
                     if curr_topic == self.config.topics.topic_dumper_ack_intermediate_state:
-                        print(f'ACK intermediate state from dumper for position = {curr_algo_action}')
+                        print(f'DUMPER: ACK intermediate state from dumper for position = {curr_algo_action}')
                         self.dumper_ack_intermediate_state.append(curr_algo_action)
 
                 if (self.dozer_position_subscriber.get_socket() in socks and
                         socks[self.dozer_position_subscriber.get_socket()] == zmq.POLLIN):
+
                     curr_topic, curr_data = self.dozer_position_subscriber.receive()
+
                     if curr_topic == self.config.topics.topic_dozer_position:
                         self.dozer_curr_pose = Pose.from_zmq_str(curr_data)
                         # print(f'Current dozer position {self.dozer_curr_pose}')
+
                 elif (self.dumper_position_subscriber.get_socket() in socks and
                         socks[self.dumper_position_subscriber.get_socket()] == zmq.POLLIN):
+
+                    curr_topic, curr_data = self.dumper_position_subscriber.receive()
+
                     if curr_topic == self.config.topics.topic_dumper_position:
                         self.dumper_curr_pose = Pose.from_zmq_str(curr_data)
                         # print(f'Current dumper position {self.dumper_curr_pose}')

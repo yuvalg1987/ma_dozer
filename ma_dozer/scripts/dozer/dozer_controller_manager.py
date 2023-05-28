@@ -70,7 +70,6 @@ class DozerControlManager(Thread):
             self.logger.init_time = self.init_time
             self.curr_pose = target_action.to_pose()
             self.enable_meas_log = True
-            self.init_time_flag = True
             self.init_step_flag = False
             self.is_finished = True
             self.dozer_publisher_ack.send(self.config.topics.topic_dozer_ack_received, curr_data)
@@ -99,7 +98,7 @@ class DozerControlManager(Thread):
         else:
             print('action ignored epsilon planner')
 
-        if not (self.target_action.position.x - 30 <= self.curr_pose.position.x <= self.target_action.position.x + 30 and \
+        if not (self.target_action.position.x - 30 <= self.curr_pose.position.x <= self.target_action.position.x + 30 and
                 self.target_action.position.y - 30 <= self.curr_pose.position.y <= self.target_action.position.y + 30):
             print(f'target is too far')
             self.is_finished = True
