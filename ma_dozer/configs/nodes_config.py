@@ -4,7 +4,7 @@ import subprocess
 from pathlib import Path
 
 try:
-    subprocess.check_output('nvidia-smi')
+    # subprocess.check_output('tegrastats')
     import cupy as cp
     print('Nvidia GPU detected!')
 except Exception:  # this command not being found can raise quite a few different errors depending on the configuration
@@ -89,10 +89,15 @@ class CameraNodeConfig(BaseModel):
     xaxis_marker_w: np.ndarray = np.load((camera_calibration_dir / 'xaxis_marker_w.npy').as_posix())
     yaxis_marker_w: np.ndarray = np.load((camera_calibration_dir / 'yaxis_marker_w.npy').as_posix())
 
-    dozer_aruco_position_added_noise_start: float = -2
-    dozer_aruco_position_added_noise_end: float = 2
-    dozer_aruco_rotation_added_noise_start: float = -2
-    dozer_aruco_rotation_added_noise_end: float = 2
+    # dozer_aruco_position_added_noise_start: float = -2
+    # dozer_aruco_position_added_noise_end: float = 2
+    # dozer_aruco_rotation_added_noise_start: float = -2
+    # dozer_aruco_rotation_added_noise_end: float = 2
+
+    dozer_aruco_position_added_noise_mu: float = 0  # Aviad
+    dozer_aruco_position_added_noise_sigma: float = 100
+    dozer_aruco_rotation_added_noise_start: float = -5
+    dozer_aruco_rotation_added_noise_end: float = 5
 
     dumper_aruco_position_added_noise_start: float = -2
     dumper_aruco_position_added_noise_end: float = 2

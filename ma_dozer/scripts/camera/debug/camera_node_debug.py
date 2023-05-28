@@ -88,7 +88,7 @@ def main():
             dozer_position_estimated_publisher.send(config.topics.topic_estimated_dozer_position,
                                                     dozer_estimated_pose.to_zmq_str())  # TODO: change after debug to dozer_estimated_pose
 
-            print(f'Dozer Pose {dozer_pose}')
+            print(f'Dozer Pose {dozer_pose} {dozer_estimated_pose}')
             # yakov removed dumper for Kalman dabugging
             # print(f'Dumper Pose {dumper_pose}')
 
