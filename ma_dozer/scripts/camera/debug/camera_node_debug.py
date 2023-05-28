@@ -79,7 +79,6 @@ def main():
             dozer_position_publisher.send(config.topics.topic_dozer_position, dozer_pose.to_zmq_str())
             dumper_position_publisher.send(config.topics.topic_dumper_position, dumper_pose.to_zmq_str())
 
-
             dozer_estimated_pose = dozer_pose.copy()
             dozer_estimated_position = dozer_estimated_pose.position + dozer_aruco_position_noise_rvs.rvs(3)
             dozer_estimated_rotation = dozer_estimated_pose.rotation + dozer_aruco_rotation_noise_rvs.rvs(3)
@@ -89,7 +88,7 @@ def main():
             dozer_position_estimated_publisher.send(config.topics.topic_estimated_dozer_position,
                                                     dozer_estimated_pose.to_zmq_str())  # TODO: change after debug to dozer_estimated_pose
 
-            print(f'Dozer Pose {dozer_pose}')
+            print(f'Dozer Pose {dozer_pose} {dozer_estimated_pose}')
             # yakov removed dumper for Kalman dabugging
             # print(f'Dumper Pose {dumper_pose}')
 

@@ -55,6 +55,8 @@ class ThreadedSubscriber(Thread):
 
         self.callback_func = callback_func
 
+        self.is_stop: bool = False
+
     def receive(self) -> [str, str]:
         curr_string = self.sub_zmq.recv_string()
         curr_topic, curr_data = curr_string.split()
@@ -65,9 +67,14 @@ class ThreadedSubscriber(Thread):
 
     def run(self) -> None:
 
-        while True:
+        while not self.is_stop:
             curr_topic, curr_data = self.receive()
             self.callback_func(curr_topic, curr_data)
+
+    def stop(self):
+        print('Exit thread')
+        # self.sub_zmq.close()
+        self.is_stop = True
 
 
 

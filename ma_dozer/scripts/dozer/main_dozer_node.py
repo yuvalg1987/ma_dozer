@@ -1,5 +1,6 @@
+import signal
 import sys
-
+import threading
 from PyQt5.QtWidgets import QApplication
 
 from ma_dozer.configs.config import Config
@@ -10,20 +11,27 @@ from ma_dozer.utils.zmq.infrastructure import ThreadedSubscriber
 
 
 def main():
+
     config: Config = Config()
 
-    # navigation_file_location = dozer_prototype_path / 'configs' / 'real_navigation_config.yaml'
-    # navigation_config = NavigationConfig.from_file(navigation_file_location)
+    exit_event = threading.Event()
 
-    control_manager = DozerControlManager(config=config)
+    control_manager = DozerControlManager(config=config, exit_event=exit_event)
+
+    def signal_handler(sig, frame):
+        print('you have stopped')
+        exit_event.set()
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, signal_handler)
 
     aruco_est_position_subscriber = ThreadedSubscriber(ip=config.camera.ip,
-                                                       port=config.camera.estimated_position_port,
+                                                       port=config.camera.dozer_estimated_position_port,
                                                        topics=[config.topics.topic_estimated_dozer_position],
                                                        callback_func=control_manager.update_pose_aruco)
 
     aruco_gt_position_subscriber = ThreadedSubscriber(ip=config.camera.ip,
-                                                      port=config.camera.position_port,
+                                                      port=config.camera.dozer_position_port,
                                                       topics=[config.topics.topic_dozer_position],
                                                       callback_func=control_manager.update_pose_aruco)
 
@@ -46,7 +54,26 @@ def main():
     win = Window(control_manager)
 
     win.show()
-    sys.exit(app.exec())
+    app.exec()
+
+    aruco_est_position_subscriber.stop()
+    aruco_gt_position_subscriber.stop()
+    imu_measurement_subscriber.end_thread()
+    action_subscriber.stop()
+    control_manager.stop()
+
+    control_manager.join()
+    print('control manager finished')
+    aruco_est_position_subscriber.join()
+    print('aruco est finished')
+    aruco_gt_position_subscriber.join()
+    print('aruco gt finished')
+    imu_measurement_subscriber.join()
+    print('imu finished')
+    action_subscriber.join()
+    print('action finished')
+
+    sys.exit()
 
 
 if __name__ == '__main__':

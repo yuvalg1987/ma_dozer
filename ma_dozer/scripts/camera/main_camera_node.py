@@ -1,9 +1,17 @@
 from multiprocessing import Pipe, Process, set_start_method
+import subprocess
+import time
 
 from ma_dozer.configs.config import Config
+from ma_dozer.scripts.camera import init_time_script_path
 from ma_dozer.utils.camera.utils import zed_capture_func, aruco_position_func, heightmap_proj_func, update_cupy_vars
 
 if __name__ == '__main__':
+
+    subprocess.call([init_time_script_path])
+    time.sleep(2)
+    subprocess.call(['sudo', 'jetson_clocks'])
+    time.sleep(5)
 
     set_start_method('spawn')
 
@@ -16,7 +24,7 @@ if __name__ == '__main__':
     depth_image_receiver, depth_image_sender = Pipe(duplex=False)
 
     zed_capture_proc    = Process(target=zed_capture_func,
-                                  args=(config.camera,
+                                  args=(camera_config,
                                         color_image_sender_0,
                                         color_image_sender_1,
                                         depth_image_sender,))

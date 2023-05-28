@@ -1,7 +1,16 @@
+from typing import Union
 import numpy as np
-import cupy as cp
-import os
+import subprocess
 from pathlib import Path
+
+try:
+    # subprocess.check_output('tegrastats')
+    import cupy as cp
+    print('Nvidia GPU detected!')
+except Exception:  # this command not being found can raise quite a few different errors depending on the configuration
+    import numpy as cp
+    print('No Nvidia GPU in system!')
+
 from ma_dozer.configs.controller_config import ControllerConfig
 from ma_dozer.configs.navigation_config import NavigationConfig
 from ma_dozer.configs.pydantic_config import BaseModel
@@ -9,6 +18,7 @@ from ma_dozer.configs.pydantic_config import BaseModel
 from ma_dozer.camera_calibration import camera_calibration_dir
 
 from pydantic import validator
+
 
 class Topics(BaseModel):
 
@@ -46,8 +56,8 @@ class CameraNodeConfig(BaseModel):
     dozer_position_port: int = 1234
     dozer_estimated_position_port: int = 1235
 
-    dumper_position_port: int = 1236
-    dumper_estimated_position_port: int = 1237
+    dumper_position_port: int = 1240
+    dumper_estimated_position_port: int = 1241
 
     color_image_address: str = None
     depth_image_address: str = None
@@ -79,10 +89,15 @@ class CameraNodeConfig(BaseModel):
     xaxis_marker_w: np.ndarray = np.load((camera_calibration_dir / 'xaxis_marker_w.npy').as_posix())
     yaxis_marker_w: np.ndarray = np.load((camera_calibration_dir / 'yaxis_marker_w.npy').as_posix())
 
-    dozer_aruco_position_added_noise_start: float = -2
-    dozer_aruco_position_added_noise_end: float = 2
-    dozer_aruco_rotation_added_noise_start: float = -2
-    dozer_aruco_rotation_added_noise_end: float = 2
+    # dozer_aruco_position_added_noise_start: float = -2
+    # dozer_aruco_position_added_noise_end: float = 2
+    # dozer_aruco_rotation_added_noise_start: float = -2
+    # dozer_aruco_rotation_added_noise_end: float = 2
+
+    dozer_aruco_position_added_noise_mu: float = 0  # Aviad
+    dozer_aruco_position_added_noise_sigma: float = 100
+    dozer_aruco_rotation_added_noise_start: float = -5
+    dozer_aruco_rotation_added_noise_end: float = 5
 
     dumper_aruco_position_added_noise_start: float = -2
     dumper_aruco_position_added_noise_end: float = 2
@@ -111,12 +126,12 @@ class CameraNodeConfig(BaseModel):
     grid_height_c: int = None
     grid_width_c: int = None
 
-    intrinsics_d: cp.ndarray = None
-    rot_c2w_d: cp.ndarray = None
-    t_w2c_w_d: cp.ndarray = None
+    intrinsics_d: Union[cp.ndarray, np.ndarray] = None
+    rot_c2w_d: Union[cp.ndarray, np.ndarray] = None
+    t_w2c_w_d: Union[cp.ndarray, np.ndarray] = None
 
-    lower_bound_d: cp.ndarray = None
-    upper_bound_d: cp.ndarray = None
+    lower_bound_d: Union[cp.ndarray, np.ndarray] = None
+    upper_bound_d: Union[cp.ndarray, np.ndarray] = None
 
     @validator("color_image_address", always=True)
     def init_color_image_address(cls, v, values):
@@ -157,7 +172,6 @@ class CameraNodeConfig(BaseModel):
         return grid_size_c[1]
 
 
-
 class DozerNode(BaseModel):
 
     ip: str = '192.168.0.101'
@@ -165,10 +179,10 @@ class DozerNode(BaseModel):
     path_port: int = 1236
     name: str = 'dozer'
 
-    action_file_path = './1_actions.txt'
+    action_file_path: str = './1_actions.txt'
 
-    imu_port = '/dev/ttyUSB0' # 'COM7 or COM8 for Windows
-    imu_baud_rate = 115200
+    imu_port: str = '/dev/ttyUSB0' # 'COM7 or COM8 for Windows
+    imu_baud_rate: int = 115200
     kalman_position_port: int = 1237
 
     controller: ControllerConfig = ControllerConfig()
@@ -184,7 +198,7 @@ class DumperNode(BaseModel):
 
     action_file_path = './1_actions.txt'
 
-    imu_port = '/dev/ttyUSB0' # 'COM7 or COM8 for Windows
+    imu_port = '/dev/ttyUSB0'  # 'COM7 or COM8 for Windows
     imu_baud_rate = 115200
     kalman_position_port: int = 1237
 
@@ -208,4 +222,4 @@ class NetworkConfig(BaseModel):
     dumper_node: DumperNode = DumperNode()
 
     dozer_aruco_idx: int = 3
-    use_estimated_aruco_pose = True
+    # use_estimated_aruco_pose = True
