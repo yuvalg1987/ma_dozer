@@ -154,6 +154,14 @@ class PIDController:
 
         results = []
         while not res and not self.is_stop:
+            if not self.is_inside_sandbox_bound():
+                print('outside the sandbox')
+                break
+
+            if not self.is_inside_target_bound():
+                print('outside the bounding box')
+                break
+
             res, delta_xyz, delta_yaw = epsilon_close_control(self.controller_config,
                                                               curr_pose=self.curr_pose,
                                                               target_pose=self.target_pose,
@@ -166,17 +174,9 @@ class PIDController:
             # if curr_delta_eps_xyz < -self.controller_config.eps_delta_translation:
             #     break
 
-            if not self.is_inside_sandbox_bound():
-                print('outside the sandbox')
-                break
-                
-            if not self.is_inside_target_bound():
-                print('outside the bounding box')
-                break
-
-            time.sleep(0.1)
             self.prev_delta_xyz = delta_xyz
             self.roboclaw_controller.forward()
+            time.sleep(0.05)
 
         self.roboclaw_controller.stop()
         self.logger.log_controller_finished(self.curr_pose, self.target_pose, self.curr_motor_command)
@@ -194,6 +194,13 @@ class PIDController:
 
         self.prev_delta_xyz = delta_xyz
         while not res and not self.is_stop:
+            if not self.is_inside_sandbox_bound():
+                print('outside the sandbox')
+                break
+
+            if not self.is_inside_target_bound():
+                print('outside the bounding box')
+                break
 
             res, delta_xyz, delta_yaw = epsilon_close_control(self.controller_config,
                                                               curr_pose=self.curr_pose,
@@ -206,17 +213,9 @@ class PIDController:
             # if curr_delta_eps_xyz < -self.controller_config.eps_delta_translation:
             #     break
 
-            if not self.is_inside_sandbox_bound():
-                print('outside the sandbox')
-                break
-                
-            if not self.is_inside_target_bound():
-                print('outside the bounding box')
-                break
-
-            time.sleep(0.1)
             self.prev_delta_xyz = delta_xyz
             self.roboclaw_controller.backward()
+            time.sleep(0.05)
 
         self.roboclaw_controller.stop()
         self.logger.log_controller_finished(self.curr_pose, self.target_pose, self.curr_motor_command)
