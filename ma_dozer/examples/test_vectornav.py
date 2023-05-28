@@ -14,26 +14,21 @@ class LogIMU:
     def __init__(self):
         self.imu_buffer = []
         self.imu_buffer_cnt = 0
-        self.IMU_BUFFER_CNT_MAX = 500
+        self.IMU_BUFFER_CNT_MAX = 100
 
-        self.logger = Logger()
+        self.logger = Logger('test')
 
     def imu_read(self, curr_topic: str, curr_data: str):
         curr_imu_measurement = IMUData.from_zmq_str(curr_data)
 
-        self.imu_buffer.append(curr_imu_measurement)
-        self.imu_buffer_cnt += 1
-        if self.imu_buffer_cnt == self.IMU_BUFFER_CNT_MAX:
-            print(f'{time.time_ns()} write to file...')
-            self.logger.log_imu_readings_buffer(imu_buffer=self.imu_buffer, buff_len=self.IMU_BUFFER_CNT_MAX)
-            self.imu_buffer_cnt = 0
+        self.logger.IMU_BUFFER_CNT_MAX = self.IMU_BUFFER_CNT_MAX
 
-            # self.logger.log_imu_readings(curr_imu_measurement)
-            # yakov
-            # print('wrote to imu_csv_file')
+        print(f'{time.time_ns()} write to file...')
+        self.logger.add_to_imu_buffer(curr_imu_measurement)
 
     def print_data(self):
-        print(f'{self.imu_buffer[-1]}')
+        if len(self.logger.imu_buffer) > 0:
+            print(f'{self.logger.imu_buffer[-1]}')
 
 
 if __name__ == '__main__':
@@ -59,13 +54,14 @@ if __name__ == '__main__':
     thread_imu.start()
 
     count_sec = 0
-    while count_sec < 10:
+    while count_sec < 30:
         time.sleep(1.)
         log_imu.print_data()
         count_sec += 1
 
     time.sleep(1.)
     thread_imu.end_thread()
+    thread_imu.join()
     log_imu.logger.close_logger_files()
 
     print('Program closed')

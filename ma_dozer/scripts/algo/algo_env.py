@@ -26,7 +26,6 @@ class Env(Thread):
             self.action_file = open(self.config.dozer.action_file_path, 'r')
         elif self.name == self.config.dumper.name:
             self.action_file = open(self.config.dumper.action_file_path, 'r')
-        self.action = None
 
     def step(self, action: Optional[Action]):
 
@@ -47,34 +46,34 @@ class Env(Thread):
         time_end = time.time()
         action_time = time_end - time_start
 
-        is_done = self.is_done()
-
-        return is_done
-
     def run(self):
         if self.init_pose is not None:
             is_done = False
 
-            # get actions from files
-            self.action = Action.from_zmq_str(self.action_file.readline())
-            self.action = self.action + self.init_pose
-            print(f'{self.name.upper()} Send start Action: {self.action}')
-            while not is_done:
-                print(f"    {self.name.upper()}: sending next action {self.action}")
+            time.sleep(3)
 
-                # run action
-                is_done = self.step(self.action)
+            while not is_done:
+                action = self.action_file.readline()
+
+                if action == '':
+                    print(f'{self.name} is finished its trajectory')
+                    break
+
+                action = Action.from_zmq_str(action)
+                action = action + self.init_pose
+                print(f"    {self.name.upper()}: sending next action {action}")
+
+                self.step(action)
+                time.sleep(1)
 
             sys.exit(0)
         else:
             print(f'{self.name.upper()}: init position is None')
 
-    def is_done(self):
-        next_action = self.action_file.readline()
-        if next_action == '':
+    def is_done(self, action: Action):
+
+        if action == '':
             print(f'{self.name} is finished its trajectory')
             return True
         else:
-            self.action = Action.from_zmq_str(next_action)
-            self.action = self.action + self.init_pose
-        return False
+            return False

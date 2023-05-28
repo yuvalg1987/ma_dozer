@@ -174,9 +174,9 @@ class DozerNode(BaseModel):
     path_port: int = 1236
     name: str = 'dozer'
 
-    action_file_path: str = './3_actions.txt'
+    action_file_path: str = './1_actions.txt'
 
-    imu_port: str = 'COM4'  # '/dev/ttyUSB0' # 'COM7 or COM8 for Windows
+    imu_port: str = '/dev/ttyUSB0' # 'COM7 or COM8 for Windows
     imu_baud_rate: int = 115200
     kalman_position_port: int = 1237
 
@@ -191,7 +191,7 @@ class DumperNode(BaseModel):
     path_port: int = 1236
     name: str = 'dumper'
 
-    action_file_path = './3_actions.txt'
+    action_file_path = './1_actions.txt'
 
     imu_port = '/dev/ttyUSB0'  # 'COM7 or COM8 for Windows
     imu_baud_rate = 115200

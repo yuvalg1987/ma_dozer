@@ -13,12 +13,13 @@ def main():
     init_dozer_pose = algo_messaging_thread.read_pose(config.dozer.name)
     init_dumper_pose = algo_messaging_thread.read_pose(config.dumper.name)
 
-    # dozer_env = Env(config=config,
-    #                 algo_messaging_thread=algo_messaging_thread,
-    #                 name=config.dozer.name,
-    #                 init_pose=init_dozer_pose)
-    #
-    # dozer_env.start()
+    dozer_env = Env(config=config,
+                    algo_messaging_thread=algo_messaging_thread,
+                    name=config.dozer.name,
+                    init_pose=init_dozer_pose)
+
+
+    dozer_env.start()
 
     dumper_env = Env(config=config,
                      algo_messaging_thread=algo_messaging_thread,
@@ -27,10 +28,11 @@ def main():
 
     dumper_env.start()
 
-    # dozer_env.join()
+    dozer_env.join()
     dumper_env.join()
 
     print('all agents finished their missions')
+    return
 
 
 if __name__ == '__main__':

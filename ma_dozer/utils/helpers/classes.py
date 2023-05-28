@@ -24,6 +24,12 @@ class Position(np.ndarray):
     def __new__(cls, x, y, z):
         return np.asarray([x, y, z]).view(cls)
 
+    def __str__(self):
+        return ','.join([str(self[n].item()) for n in range(3)])
+
+    # def __format__(self, format_spec):
+    #     return np.array([round(self[n].item(), format_spec) for n in range(3)])
+
     @property
     def x(self):
         return self[0].item()
@@ -363,6 +369,19 @@ class Pose:
         return ','.join([str(x) for x in [self.timestamp, self.position.x, self.position.y, self.position.z,
                          self.rotation.yaw, self.rotation.pitch, self.rotation.roll]])
 
+    def to_numpy(self):
+        cam_data_np = np.asarray(
+            [
+                self.timestamp,
+                self.position.x,
+                self.position.y,
+                self.position.z,
+                self.rotation.yaw,
+                self.rotation.pitch,
+                self.rotation.roll
+            ])
+        return cam_data_np
+
 
 class Action:
 
@@ -472,18 +491,7 @@ class Action:
                f'Z = {self.position.z:.3f}, ' + \
                f'Yaw = {self.rotation.euler.yaw:.3f}, ' + \
                f'Pitch = {self.rotation.euler.pitch:.3f}, ' + \
-               f'Roll = {self.rotation.euler.roll:.3f}, ' \
-               f'motion_type = {self.motion_type}'
-
-    def __repr__(self):
-        return f'id = {self.vehicle_id}, ' + \
-            f'X = {self.position.x:.3f}, ' + \
-            f'Y = {self.position.y:.3f}, ' + \
-            f'Z = {self.position.z:.3f}, ' + \
-            f'Yaw = {self.rotation.euler.yaw:.3f}, ' + \
-            f'Pitch = {self.rotation.euler.pitch:.3f}, ' + \
-            f'Roll = {self.rotation.euler.roll:.3f}, ' \
-            f'motion_type = {self.motion_type}'
+               f'Roll = {self.rotation.euler.roll:.3f}'
 
     def to_zmq_str(self):
 
@@ -635,6 +643,20 @@ class IMUData:
                                           self.delta_theta.delta_yaw,
                                           self.delta_theta.delta_pitch,
                                           self.delta_theta.delta_roll]])
+
+    def to_numpy(self):
+        imu_data_np = np.asarray(
+            [
+                self.timestamp,
+                self.delta_t,
+                self.delta_velocity.dv_x,
+                self.delta_velocity.dv_y,
+                self.delta_velocity.dv_z,
+                self.delta_theta.delta_yaw,
+                self.delta_theta.delta_pitch,
+                self.delta_theta.delta_roll
+            ])
+        return imu_data_np
 
 
 @dataclass

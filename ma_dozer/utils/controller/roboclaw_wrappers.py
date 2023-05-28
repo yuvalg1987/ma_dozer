@@ -21,12 +21,12 @@ class RoboclawBaseWrapper:
         pass
 
     @abstractmethod
-    def rotate_right(self, speed: int = 30): # Max speed is 128
+    def rotate_right(self, speed: int = 60): # Max speed is 128
         # print('Motor Command Rotate Right')
         pass
 
     @abstractmethod
-    def rotate_left(self, speed: int = 30): # Max speed is 128
+    def rotate_left(self, speed: int = 60): # Max speed is 128
         # print('Motor Command Rotate Left')
         pass
 
@@ -79,12 +79,12 @@ class RoboclawWrapper(RoboclawBaseWrapper):
         self.roboclaw.BackwardM2(self.address, speed)
 
     def rotate_right(self, speed: int = 30): # Max speed is 128
-        self.roboclaw.BackwardM1(self.address, speed)
-        self.roboclaw.ForwardM2(self.address, speed)
+        self.roboclaw.BackwardM2(self.address, speed)
+        self.roboclaw.ForwardM1(self.address, speed)
 
     def rotate_left(self, speed: int = 30): # Max speed is 128
-        self.roboclaw.ForwardM1(self.address, speed)
-        self.roboclaw.BackwardM2(self.address, speed)
+        self.roboclaw.ForwardM2(self.address, speed)
+        self.roboclaw.BackwardM1(self.address, speed)
 
     def stop(self):
         self.roboclaw.ForwardM1(self.address, 0)
