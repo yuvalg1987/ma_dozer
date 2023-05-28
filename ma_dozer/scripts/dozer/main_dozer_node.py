@@ -55,13 +55,13 @@ def main():
 
     win.show()
     app.exec()
-
+    
     aruco_est_position_subscriber.stop()
     aruco_gt_position_subscriber.stop()
     imu_measurement_subscriber.end_thread()
     action_subscriber.stop()
     control_manager.stop()
-
+    
     control_manager.join()
     print('control manager finished')
     aruco_est_position_subscriber.join()
@@ -72,7 +72,7 @@ def main():
     print('imu finished')
     action_subscriber.join()
     print('action finished')
-
+    
     sys.exit()
 
 

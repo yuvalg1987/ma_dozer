@@ -88,7 +88,7 @@ class DumperControlManager(Thread):
         curr_data = self.target_action.to_zmq_str()
         self.dumper_publisher_ack.send(self.config.topics.topic_dumper_ack_received, curr_data)
         print(f'Sent ACK_RECEIVED {target_action}')
-
+        
         if epsilon_close_plan(self.config.dumper.controller,
                               self.curr_pose,
                               self.target_action,
